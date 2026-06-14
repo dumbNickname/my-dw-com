@@ -1,0 +1,6 @@
+{
+  "MyDwCard": {
+    "hash": "bc9cda96964b0ed00bed1f81f1120a52d2118b67421fc462102043b8b5a96ad9",
+    "query": "query MyDwCard($id: Int!, $lang: Language!) {\n  content(id: $id, lang: $lang) {\n    ... on ModelAspect { id modelType language }\n    ... on NamedAspect { title }\n    ... on TeaserAspect { roadTeaserKicker }\n    ... on TextualAspect { shortTeaser teaser }\n    ... on DeliveryAspect { contentDate }\n    ... on AssociationsAspect {\n      categories { name originId }\n      regions { name originId }\n      mainContentImage { staticUrl }\n    }\n    ... on UrlAspect { namedUrl }\n    ... on PlaybackResourceAspect { formattedDurationInMinutes duration }\n  }\n}"
+  }
+}

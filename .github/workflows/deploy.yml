@@ -1,0 +1,64 @@
+name: Deploy SPA to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Pre-register persisted GraphQL queries with webapi.dw.com.
+      # This runs from GitHub-hosted runners — the script POSTs to
+      # https://webapi.dw.com/graphql which is publicly reachable. No
+      # secret / token is needed.
+      - name: Register GraphQL persisted queries
+        run: pnpm run register-hashes
+        working-directory: solid-site
+
+      - name: Build site
+        run: pnpm build
+        working-directory: solid-site
+        env:
+          # Project Pages URL: https://dumbnickname.github.io/my-dw-com/
+          BASE_PATH: /my-dw-com
+          # GraphQL endpoint. Default points at a placeholder so the build
+          # would obviously fail if the secret was not set.
+          # Set this in the repo's Settings → Secrets and variables →
+          # Actions → Variables: VITE_GRAPHQL_BASE_URL.
+          VITE_GRAPHQL_BASE_URL: ${{ vars.VITE_GRAPHQL_BASE_URL || 'https://example.invalid/graphql' }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: solid-site/.output/public
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

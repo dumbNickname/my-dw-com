@@ -1,0 +1,6 @@
+name = "mydw-gw"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+
+# Default to the workers.dev subdomain. No custom routes / domains needed.
+workers_dev = true

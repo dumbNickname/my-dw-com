@@ -1,0 +1,22 @@
+[
+  { "id": "19990022", "name": "Politics" },
+  { "id": "19990006", "name": "Society" },
+  { "id": "19990023", "name": "Conflicts" },
+  { "id": "19990032", "name": "Business" },
+  { "id": "19990010", "name": "Culture" },
+  { "id": "19991201", "name": "Offbeat" },
+  { "id": "19990033", "name": "Science" },
+  { "id": "19990021", "name": "Nature and Environment" },
+  { "id": "19990029", "name": "Sports" },
+  { "id": "19990007", "name": "Health" },
+  { "id": "19990027", "name": "Human Rights" },
+  { "id": "19990019", "name": "Lifestyle" },
+  { "id": "19990031", "name": "Technology" },
+  { "id": "19991200", "name": "Migration" },
+  { "id": "19990028", "name": "Travel" },
+  { "id": "19990004", "name": "Digital World" },
+  { "id": "19990016", "name": "Music" },
+  { "id": "19991500", "name": "Climate" },
+  { "id": "19990013", "name": "Film" },
+  { "id": "19990001", "name": "Cars and Transportation" }
+]

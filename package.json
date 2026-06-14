@@ -1,0 +1,10 @@
+{
+  "name": "my-dw-com-workspace",
+  "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild"
+    ]
+  }
+}
