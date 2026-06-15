@@ -48,11 +48,12 @@ jobs:
         env:
           # Project Pages URL: https://dumbnickname.github.io/my-dw-com/
           BASE_PATH: /my-dw-com
-          # GraphQL endpoint. Default points at a placeholder so the build
-          # would obviously fail if the secret was not set.
-          # Set this in the repo's Settings → Secrets and variables →
-          # Actions → Variables: VITE_GRAPHQL_BASE_URL.
-          VITE_GRAPHQL_BASE_URL: ${{ vars.VITE_GRAPHQL_BASE_URL || 'https://example.invalid/graphql' }}
+          # GraphQL endpoint. Defaults to the prod Cloudflare Worker shim
+          # (see ../cloudflare-worker/). Override per-deploy via repo
+          # Settings → Secrets and variables → Actions → Variables:
+          # VITE_GRAPHQL_BASE_URL (e.g. to point at https://webapi.dw.com/graphql
+          # once DW widens CORS, or at a staging Worker).
+          VITE_GRAPHQL_BASE_URL: ${{ vars.VITE_GRAPHQL_BASE_URL || 'https://mydw-api.impalatab.workers.dev' }}
 
       - uses: actions/configure-pages@v5
 
