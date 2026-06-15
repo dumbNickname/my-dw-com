@@ -6,6 +6,9 @@ export default defineConfig({
   ssr: false,
   vite: {
     build: { sourcemap: true },
+    define: {
+      "import.meta.env.BASE_PATH": JSON.stringify(basePath),
+    },
   },
   server: {
     baseURL: basePath,
