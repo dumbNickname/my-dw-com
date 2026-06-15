@@ -2,12 +2,26 @@
  * Feed card — the single full-screen content the user reads on tap.
  *
  * Shows: image, kicker, title, summary, language badge, relative date.
- * Bottom action bar: "Open on dw.com" + "Next".
- * Like / Save / Read-more land in M2.
+ *
+ * Bottom action bar (M2 first slice):
+ *   ♥ Like        toggles, persists to profile.liked_ids
+ *   🔖 Save (n)   toggles, persists to profile.saved (snapshot stored)
+ *                 the count opens the saved bottom-sheet
+ *   ⤢ Expand      lazy-fetches body via MyDwBody, renders as plain
+ *                 paragraphs (no DOMPurify until M3)
+ *   Open ↗        external link to dw.com
+ *   Next →        primary action, advances the feed
+ *
+ * Body HTML is fetched on demand and memoised by (id, lang) in the
+ * GraphQL session cache, so re-expanding the same card is instant. We
+ * also keep the result on a parent-owned signal so navigating back to
+ * the same card during a session doesn't re-fetch.
  */
-import { Show } from "solid-js";
+import { Show, createSignal, For } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
+import { fetchBody } from "~/lib/graphql";
+import { htmlToParagraphs } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
 
 const formatRelative = (iso: string | null | undefined): string => {
@@ -27,7 +41,6 @@ const formatRelative = (iso: string | null | undefined): string => {
 
 const buildDwLink = (content: CardContent): string => {
   if (content.namedUrl) return `https://www.dw.com${content.namedUrl}`;
-  // Fallback URL that DW redirects on its end:
   const langSlug = (content.language || "ENGLISH").toLowerCase().slice(0, 2);
   return `https://www.dw.com/${langSlug}/a-${content.id}`;
 };
@@ -37,13 +50,50 @@ const langShort = (lang: string | null | undefined): string =>
 
 const summaryText = (c: CardContent): string => c.shortTeaser || c.teaser || "";
 
-export function Card(props: {
+export type CardProps = {
   content: CardContent;
   onNext: () => void;
   hasNext: boolean;
-}) {
+  /** Whether this card is currently in the user's liked set. */
+  liked: boolean;
+  /** Whether this card is currently in the user's saved list. */
+  saved: boolean;
+  /** Number of total saved articles (for the saved-pill badge). */
+  savedCount: number;
+  onToggleLike: () => void;
+  onToggleSave: () => void;
+  onOpenSaved: () => void;
+};
+
+export function Card(props: CardProps) {
   const img = () => resolveImage(props.content.mainContentImage?.staticUrl, "60X", 720);
   const dwLink = () => buildDwLink(props.content);
+
+  const [expanded, setExpanded] = createSignal(false);
+  const [bodyParas, setBodyParas] = createSignal<string[] | null>(null);
+  const [bodyLoading, setBodyLoading] = createSignal(false);
+  const [bodyError, setBodyError] = createSignal(false);
+
+  async function handleExpand() {
+    if (expanded()) {
+      setExpanded(false);
+      return;
+    }
+    setExpanded(true);
+    if (bodyParas() !== null) return; // already loaded for this card
+    setBodyLoading(true);
+    setBodyError(false);
+    try {
+      const html = await fetchBody(props.content.id, props.content.language);
+      const paras = htmlToParagraphs(html);
+      setBodyParas(paras);
+      if (paras.length === 0) setBodyError(true);
+    } catch {
+      setBodyError(true);
+    } finally {
+      setBodyLoading(false);
+    }
+  }
 
   return (
     <article class="feed-card" aria-label={props.content.title || "Article"}>
@@ -80,39 +130,109 @@ export function Card(props: {
           <p class="feed-card-summary">{summaryText(props.content)}</p>
         </Show>
 
-        <div class="feed-actions">
-          <a
-            class="canon-link"
-            href={dwLink()}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Open on dw.com ↗
-          </a>
+        <Show when={expanded()}>
+          <div class="feed-card-body-text" aria-live="polite">
+            <Show when={bodyLoading()}>
+              <p class="feed-card-body-status">Loading…</p>
+            </Show>
+            <Show when={!bodyLoading() && bodyError()}>
+              <p class="feed-card-body-status">
+                Couldn't load the full article.{" "}
+                <a class="canon-link" href={dwLink()} target="_blank" rel="noopener noreferrer">
+                  Open on dw.com ↗
+                </a>
+              </p>
+            </Show>
+            <Show when={!bodyLoading() && bodyParas() && bodyParas()!.length > 0}>
+              <For each={bodyParas()!}>{(p) => <p>{p}</p>}</For>
+            </Show>
+          </div>
+        </Show>
+      </div>
+
+      <nav class="action-bar" aria-label="Article actions">
+        <button
+          type="button"
+          class="action-btn"
+          data-active={props.liked}
+          onClick={() => props.onToggleLike()}
+          aria-pressed={props.liked}
+          aria-label={props.liked ? "Unlike article" : "Like article"}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill={props.liked ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M12 21s-7-4.35-9.5-8.5C.5 9 2 5 5.5 5c2 0 3.5 1.2 4.5 2.5C11 6.2 12.5 5 14.5 5 18 5 19.5 9 17.5 12.5 15 16.65 12 21 12 21z" />
+          </svg>
+          <span class="action-label">{props.liked ? "Liked" : "Like"}</span>
+        </button>
+
+        <div class="action-save-group">
           <button
             type="button"
-            class="btn btn-primary"
-            onClick={() => props.onNext()}
-            disabled={!props.hasNext}
-            aria-label="Next article"
+            class="action-btn"
+            data-active={props.saved}
+            onClick={() => props.onToggleSave()}
+            aria-pressed={props.saved}
+            aria-label={props.saved ? "Remove from saved" : "Save article"}
           >
-            Next
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M5 3l5 5-5 5" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill={props.saved ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 4h12v17l-6-4-6 4z" />
             </svg>
+            <span class="action-label">{props.saved ? "Saved" : "Save"}</span>
           </button>
+          <Show when={props.savedCount > 0}>
+            <button
+              type="button"
+              class="action-saved-count"
+              onClick={() => props.onOpenSaved()}
+              aria-label={`Open saved list (${props.savedCount})`}
+            >
+              {props.savedCount}
+            </button>
+          </Show>
         </div>
-      </div>
+
+        <button
+          type="button"
+          class="action-btn"
+          data-active={expanded()}
+          onClick={() => void handleExpand()}
+          aria-expanded={expanded()}
+          aria-label={expanded() ? "Collapse article" : "Expand article"}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <Show when={!expanded()} fallback={<path d="M6 15l6-6 6 6" />}>
+              <path d="M6 9l6 6 6-6" />
+            </Show>
+          </svg>
+          <span class="action-label">{expanded() ? "Less" : "Read"}</span>
+        </button>
+
+        <a
+          class="action-btn action-btn-link"
+          href={dwLink()}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open original on dw.com"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" />
+          </svg>
+          <span class="action-label">dw.com</span>
+        </a>
+
+        <button
+          type="button"
+          class="action-btn action-btn-primary"
+          onClick={() => props.onNext()}
+          disabled={!props.hasNext}
+          aria-label="Next article"
+        >
+          <span class="action-label">Next</span>
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 3l5 5-5 5" />
+          </svg>
+        </button>
+      </nav>
     </article>
   );
 }

@@ -2,5 +2,9 @@
   "MyDwCard": {
     "hash": "bc9cda96964b0ed00bed1f81f1120a52d2118b67421fc462102043b8b5a96ad9",
     "query": "query MyDwCard($id: Int!, $lang: Language!) {\n  content(id: $id, lang: $lang) {\n    ... on ModelAspect { id modelType language }\n    ... on NamedAspect { title }\n    ... on TeaserAspect { roadTeaserKicker }\n    ... on TextualAspect { shortTeaser teaser }\n    ... on DeliveryAspect { contentDate }\n    ... on AssociationsAspect {\n      categories { name originId }\n      regions { name originId }\n      mainContentImage { staticUrl }\n    }\n    ... on UrlAspect { namedUrl }\n    ... on PlaybackResourceAspect { formattedDurationInMinutes duration }\n  }\n}"
+  },
+  "MyDwBody": {
+    "hash": "a2e69b66aec187f04720eed816733737dea30be9639963abea2a171b0c0d3c35",
+    "query": "query MyDwBody($id: Int!, $lang: Language!) {\n  content(id: $id, lang: $lang) {\n    ... on ModelAspect { id }\n    ... on TextualAspect { text }\n  }\n}"
   }
 }

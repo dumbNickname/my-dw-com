@@ -5,17 +5,30 @@
  * card while the current is on screen so taps feel instant. Falls back
  * gracefully when the pool runs dry.
  *
- * No likes / saves / streak / detail-view in M1 — those land in M2.
+ * Action bar (M2 first slice): like + save persist to profile; expand
+ * lazy-fetches the body. Saved-list bottom-sheet renders here. Bandit
+ * pool / dimension_pref / streak / untagger remain pending.
  */
 import { Title } from "@solidjs/meta";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
 
 import { Card } from "~/components/Card";
+import { SavedSheet } from "~/components/SavedSheet";
 import { CardSkeleton } from "~/components/Skeleton";
 import { fetchCard, type CardContent } from "~/lib/graphql";
 import * as pool from "~/lib/pool";
-import { isOnboarded, load, markSeen, save, type Profile } from "~/lib/profile";
+import {
+  isLiked,
+  isOnboarded,
+  isSaved,
+  load,
+  markSeen,
+  save,
+  toggleLike,
+  toggleSave,
+  type Profile,
+} from "~/lib/profile";
 
 type FeedState =
   | { kind: "loading" }
@@ -28,27 +41,33 @@ export default function Feed() {
 
   const [state, setState] = createSignal<FeedState>({ kind: "loading" });
 
-  // Profile + pool live as plain refs because we mutate them imperatively
-  // around the per-tap fetch dance.
-  let profile: Profile = load();
-  let poolState: pool.PoolState = pool.createPool(profile.langs[0] || "ENGLISH");
+  // Profile is reactive so the action bar reflects toggle state immediately
+  // without us threading it through the FeedState union.
+  const [profile, setProfile] = createSignal<Profile>(load());
+  const [sheetOpen, setSheetOpen] = createSignal(false);
 
-  const persist = () => save(profile);
+  // Pool lives as a plain ref because we mutate it imperatively around
+  // the per-tap fetch dance.
+  let poolState: pool.PoolState = pool.createPool(profile().langs[0] || "ENGLISH");
+
+  const updateProfile = (next: Profile) => {
+    setProfile(next);
+    save(next);
+  };
 
   /** Pop ids until we get one whose GraphQL fetch returns content. */
   async function nextValidContent(): Promise<CardContent | null> {
     for (let attempt = 0; attempt < 8; attempt++) {
       if (pool.shouldRefill(poolState)) {
-        poolState = await pool.refill(poolState, profile);
+        poolState = await pool.refill(poolState, profile());
       }
       const { id, rest } = pool.pop(poolState);
       poolState = rest;
       if (!id) return null;
-      const lang = profile.langs[0] || "ENGLISH";
+      const lang = profile().langs[0] || "ENGLISH";
       const content = await fetchCard(id, lang);
       if (content) {
-        profile = markSeen(profile, String(content.id));
-        persist();
+        updateProfile(markSeen(profile(), String(content.id)));
         return content;
       }
       // GraphQL failed for this id (deleted, lang mismatch). Skip.
@@ -57,13 +76,13 @@ export default function Feed() {
   }
 
   async function init() {
-    if (!isOnboarded(profile)) {
+    if (!isOnboarded(profile())) {
       navigate("/", { replace: true });
       return;
     }
     setState({ kind: "loading" });
     try {
-      poolState = await pool.refill(poolState, profile);
+      poolState = await pool.refill(poolState, profile());
       const current = await nextValidContent();
       if (!current) {
         setState({ kind: "empty" });
@@ -109,6 +128,30 @@ export default function Feed() {
     );
   }
 
+  const onToggleLike = (c: CardContent) => {
+    updateProfile(toggleLike(profile(), String(c.id)));
+  };
+
+  const onToggleSave = (c: CardContent) => {
+    updateProfile(
+      toggleSave(profile(), String(c.id), {
+        id: String(c.id),
+        lang: c.language || profile().langs[0] || "ENGLISH",
+        title: c.title || "(untitled)",
+        kicker: c.roadTeaserKicker,
+        image: c.mainContentImage?.staticUrl || null,
+        namedUrl: c.namedUrl,
+      }),
+    );
+  };
+
+  const removeSaved = (id: string) => {
+    updateProfile(toggleSave(profile(), id, {
+      // Snapshot is ignored on removal (toggleSave checks existence first).
+      id, lang: "ENGLISH", title: "", kicker: null, image: null, namedUrl: null,
+    }));
+  };
+
   onMount(() => {
     void init();
   });
@@ -127,6 +170,12 @@ export default function Feed() {
               content={s.current}
               onNext={handleNext}
               hasNext={true}
+              liked={isLiked(profile(), String(s.current.id))}
+              saved={isSaved(profile(), String(s.current.id))}
+              savedCount={profile().saved.length}
+              onToggleLike={() => onToggleLike(s.current)}
+              onToggleSave={() => onToggleSave(s.current)}
+              onOpenSaved={() => setSheetOpen(true)}
             />
           );
         })()}
@@ -168,6 +217,13 @@ export default function Feed() {
           );
         })()}
       </Show>
+
+      <SavedSheet
+        open={sheetOpen()}
+        items={profile().saved}
+        onClose={() => setSheetOpen(false)}
+        onRemove={removeSaved}
+      />
     </div>
   );
 }

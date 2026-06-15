@@ -1,11 +1,36 @@
 import { MetaProvider } from "@solidjs/meta";
-import { Router } from "@solidjs/router";
+import { Router, useLocation } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
-import { Suspense } from "solid-js";
+import { Show, Suspense, type JSX } from "solid-js";
 
 import "./styles/global.css";
 
 const BASE_PATH = (import.meta.env.BASE_PATH || "").replace(/\/$/, "");
+
+/**
+ * Inner shell — receives the active location so we can drop the top
+ * chrome on screens where the reels card needs all the vertical space
+ * (currently /feed). Brand wordmark stays on onboarding.
+ */
+function Shell(props: { children: JSX.Element }) {
+  const location = useLocation();
+  const isFeed = () => location.pathname.replace(/\/$/, "").endsWith("/feed");
+
+  return (
+    <div class="app-shell" data-route={isFeed() ? "feed" : "default"}>
+      <Show when={!isFeed()}>
+        <header class="app-header">
+          <a href={BASE_PATH + "/"} class="brand" aria-label="my.dw.com home">
+            my<span class="brand-dot">.</span>dw<span class="brand-dot">.</span>com
+          </a>
+        </header>
+      </Show>
+      <main class="app-main">
+        <Suspense>{props.children}</Suspense>
+      </main>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -13,16 +38,7 @@ export default function App() {
       base={BASE_PATH}
       root={(props) => (
         <MetaProvider>
-          <div class="app-shell">
-            <header class="app-header">
-              <a href={BASE_PATH + "/"} class="brand" aria-label="my.dw.com home">
-                my<span class="brand-dot">.</span>dw<span class="brand-dot">.</span>com
-              </a>
-            </header>
-            <main class="app-main">
-              <Suspense>{props.children}</Suspense>
-            </main>
-          </div>
+          <Shell>{props.children}</Shell>
         </MetaProvider>
       )}
     >

@@ -125,3 +125,18 @@ export async function fetchCard(contentId: string, lang: string): Promise<CardCo
   const data = await execute<CardResponse>("MyDwCard", { id, lang });
   return data?.content ?? null;
 }
+
+type BodyResponse = { content: { id: number; text: string | null } | null };
+
+/**
+ * Lazily fetch the article body HTML for an already-rendered card. Only
+ * called when the user taps "Expand" — keeps the per-card payload small.
+ * Result is memoised by (id, lang) in the session cache, so re-expanding
+ * the same card is free.
+ */
+export async function fetchBody(contentId: string | number, lang: string): Promise<string | null> {
+  const id = Number(contentId);
+  if (!Number.isFinite(id)) return null;
+  const data = await execute<BodyResponse>("MyDwBody", { id, lang });
+  return data?.content?.text ?? null;
+}

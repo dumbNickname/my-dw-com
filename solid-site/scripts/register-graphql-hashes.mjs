@@ -34,6 +34,12 @@ const QUERIES = {
     ... on PlaybackResourceAspect { formattedDurationInMinutes duration }
   }
 }`,
+  MyDwBody: `query MyDwBody($id: Int!, $lang: Language!) {
+  content(id: $id, lang: $lang) {
+    ... on ModelAspect { id }
+    ... on TextualAspect { text }
+  }
+}`,
 };
 
 // A known-good content_id for registration. The server only needs to see
