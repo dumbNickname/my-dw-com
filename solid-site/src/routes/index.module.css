@@ -36,6 +36,30 @@
   gap: 8px;
 }
 
+/* Subtle action chip — used for "Show more / Show less" inside a chip
+ * row. Looks like a chip but visually de-emphasised so it doesn't
+ * compete with selectable choices. */
+.chip-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text-mute);
+  background: transparent;
+  border: 1px dashed var(--c-border-strong);
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.chip-ghost:hover {
+  color: var(--c-text);
+  background: var(--c-surface-2);
+  border-style: solid;
+}
+
 /* Inline header styles previously written via `style={{}}` in the JSX */
 
 .intro {

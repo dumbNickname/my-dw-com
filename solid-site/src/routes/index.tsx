@@ -1,11 +1,15 @@
 /**
  * Onboarding screen — pick interests, then start.
  *
- * Structure (per PRD M1 / Round 2 Q2.1):
- *   1. Categories: 20 chips from src/data/categories.json.
- *   2. Regions: 10 chips from src/data/regions.json.
- *   3. Trending carousel: ~10 cards from /v2/most-viewed via per-id GraphQL.
- *   4. Mandatory: ≥1 chip OR ≥1 carousel tap. Then "Start reading" → /feed.
+ * Structure:
+ *   1. Languages: popular 8 by default + "Show more" expander for the
+ *      rest. On first visit we pre-select the browser's preferred
+ *      DW-supported language (falling back to ENGLISH).
+ *   2. Categories: 20 chips from src/data/categories.json.
+ *   3. Regions: 10 chips from src/data/regions.json.
+ *   4. Trending carousel: ~10 cards from /v2/most-viewed via per-id
+ *      GraphQL (refetches when the first-selected language changes).
+ *   5. Mandatory: ≥1 chip OR ≥1 carousel tap. Then "Start reading" → /feed.
  *
  * Selections write to localStorage profile and the feed picks up from there.
  */
@@ -18,6 +22,12 @@ import { CarouselSkeleton } from "~/components/Skeleton";
 import categoriesData from "~/data/categories.json";
 import regionsData from "~/data/regions.json";
 import { fetchCard, type CardContent } from "~/lib/graphql";
+import {
+  detectBrowserLang,
+  byEnum,
+  OTHER_LANGUAGES,
+  POPULAR_LANGUAGES,
+} from "~/lib/lang";
 import * as peach from "~/lib/peach";
 import { isOnboarded, load, save, type Profile } from "~/lib/profile";
 
@@ -47,13 +57,36 @@ async function loadTrendingCards(lang: string): Promise<CardContent[]> {
   return out;
 }
 
+/**
+ * Apply browser-language autodetection on a freshly-loaded profile.
+ * Only runs when the user hasn't touched anything yet (no categories,
+ * regions, seed_ids, likes, or saves). Returns the profile unchanged
+ * if the user has already onboarded or already has non-default langs.
+ */
+function withAutodetectedLang(p: Profile): Profile {
+  const usingDefault = p.langs.length === 1 && p.langs[0] === "ENGLISH";
+  const untouched =
+    p.categories.length === 0 &&
+    p.regions.length === 0 &&
+    p.seed_ids.length === 0 &&
+    p.liked.length === 0 &&
+    p.saved.length === 0;
+  if (!usingDefault || !untouched) return p;
+  const detected = detectBrowserLang();
+  if (!detected || detected === "ENGLISH") return p;
+  // Prepend the detected language so it becomes langs[0] (the one used
+  // by trending / similar / most-viewed). Keep ENGLISH as a fallback.
+  return { ...p, langs: [detected, "ENGLISH"] };
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
 
-  const [profile, setProfile] = createSignal<Profile>(load());
+  const [profile, setProfile] = createSignal<Profile>(withAutodetectedLang(load()));
   const [trending, setTrending] = createSignal<CardContent[]>([]);
   const [trendingLoading, setTrendingLoading] = createSignal(true);
   const [trendingError, setTrendingError] = createSignal(false);
+  const [showAllLangs, setShowAllLangs] = createSignal(false);
 
   // If the user already onboarded, redirect to /feed immediately.
   onMount(() => {
@@ -61,19 +94,45 @@ export default function Onboarding() {
       navigate("/feed", { replace: true });
       return;
     }
-    setTrendingLoading(true);
-    setTrendingError(false);
-    loadTrendingCards(profile().langs[0] || "ENGLISH")
-      .then((cards) => {
-        setTrending(cards);
-        setTrendingError(cards.length === 0);
-      })
-      .catch(() => setTrendingError(true))
-      .finally(() => setTrendingLoading(false));
   });
+
+  // (Re)load the trending carousel whenever the primary language changes.
+  createEffect(
+    on(
+      () => profile().langs[0] || "ENGLISH",
+      (lang) => {
+        setTrendingLoading(true);
+        setTrendingError(false);
+        loadTrendingCards(lang)
+          .then((cards) => {
+            setTrending(cards);
+            setTrendingError(cards.length === 0);
+          })
+          .catch(() => setTrendingError(true))
+          .finally(() => setTrendingLoading(false));
+      },
+    ),
+  );
 
   // Persist on every change. Cheap.
   createEffect(on(profile, (p) => save(p)));
+
+  /**
+   * Toggle a language. Always keep at least one selected. The most
+   * recently added language becomes langs[0] (drives trending / similar /
+   * most-viewed) so the UX feels live: tap German → carousel reloads
+   * in German.
+   */
+  const toggleLang = (e: string) => {
+    setProfile((p) => {
+      const has = p.langs.includes(e);
+      if (has) {
+        if (p.langs.length <= 1) return p; // never empty
+        return { ...p, langs: p.langs.filter((l) => l !== e) };
+      }
+      return { ...p, langs: [e, ...p.langs.filter((l) => l !== e)] };
+    });
+  };
 
   const toggleCategory = (id: string) => {
     setProfile((p) => ({
@@ -112,6 +171,17 @@ export default function Onboarding() {
     navigate("/feed");
   };
 
+  // Any non-popular language picked by the user should be visible by
+  // default in the expander, so they can see the selection without
+  // clicking "Show more".
+  const hasSelectedHiddenLang = () =>
+    profile().langs.some((e) => {
+      const lang = byEnum(e);
+      return lang && !lang.popular;
+    });
+
+  const showMore = () => showAllLangs() || hasSelectedHiddenLang();
+
   return (
     <div class="shell">
       <Title>my.dw.com — pick what to read</Title>
@@ -123,6 +193,50 @@ export default function Onboarding() {
           this only on this device, no account required.
         </p>
       </header>
+
+      <section class="section-block">
+        <h2 class="section-title">Languages</h2>
+        <div class={styles["chip-row"]}>
+          <For each={POPULAR_LANGUAGES}>
+            {(l) => (
+              <button
+                type="button"
+                class={styles.chip}
+                data-selected={profile().langs.includes(l.enum)}
+                aria-pressed={profile().langs.includes(l.enum)}
+                onClick={() => toggleLang(l.enum)}
+                title={l.english}
+              >
+                {l.native}
+              </button>
+            )}
+          </For>
+          <Show when={showMore()}>
+            <For each={OTHER_LANGUAGES}>
+              {(l) => (
+                <button
+                  type="button"
+                  class={styles.chip}
+                  data-selected={profile().langs.includes(l.enum)}
+                  aria-pressed={profile().langs.includes(l.enum)}
+                  onClick={() => toggleLang(l.enum)}
+                  title={l.english}
+                >
+                  {l.native}
+                </button>
+              )}
+            </For>
+          </Show>
+          <button
+            type="button"
+            class={styles["chip-ghost"]}
+            onClick={() => setShowAllLangs((x) => !x)}
+            aria-expanded={showMore()}
+          >
+            {showAllLangs() ? "Show less" : `Show ${OTHER_LANGUAGES.length} more`}
+          </button>
+        </div>
+      </section>
 
       <section class="section-block">
         <h2 class="section-title">Topics</h2>

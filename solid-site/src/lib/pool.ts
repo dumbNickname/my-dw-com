@@ -63,6 +63,14 @@ async function fetchColdStartCandidates(profile: Profile): Promise<string[]> {
     requests.push(peach.similar(seed, lang, PER_SOURCE_AMOUNT));
   }
 
+  // Recently liked articles → similar. Stronger signal than seed_ids
+  // (explicit user action mid-session) so we boost off these too. The
+  // `liked` array is newest-first, so .slice(0, 3) gives us the freshest
+  // interests. Capped at 3 to keep total parallel fetches bounded.
+  for (const item of profile.liked.slice(0, 3)) {
+    requests.push(peach.similar(item.id, lang, PER_SOURCE_AMOUNT));
+  }
+
   // Always include some freshness, even on rich profiles.
   requests.push(peach.trendingTz(lang, tz, PER_SOURCE_AMOUNT));
 
