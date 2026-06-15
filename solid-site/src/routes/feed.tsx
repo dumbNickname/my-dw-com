@@ -17,7 +17,7 @@ import { createSignal, onMount, Show } from "solid-js";
 import { Card } from "~/components/Card";
 import { CardSkeleton } from "~/components/Skeleton";
 import { fetchCard, type CardContent } from "~/lib/graphql";
-import { useLibrary } from "~/lib/libraryContext";
+import { resolveImage } from "~/lib/image";
 import * as pool from "~/lib/pool";
 import {
   isLiked,
@@ -43,13 +43,16 @@ const snapshot = (c: CardContent, fallbackLang: string): Omit<LibraryItem, "ts">
   lang: c.language || fallbackLang,
   title: c.title || "(untitled)",
   kicker: c.roadTeaserKicker,
-  image: c.mainContentImage?.staticUrl || null,
+  // Resolve the staticUrl now so the library sheet can render the thumb
+  // without re-implementing the format ladder. We pick the 80X group
+  // (square) because the sheet shows a 64px square; 802 (≈352px wide) is
+  // the smallest entry that still looks crisp on hi-DPI screens.
+  image: resolveImage(c.mainContentImage?.staticUrl, "80X", 80) ?? null,
   namedUrl: c.namedUrl,
 });
 
 export default function Feed() {
   const navigate = useNavigate();
-  const library = useLibrary();
 
   const [state, setState] = createSignal<FeedState>({ kind: "loading" });
 
@@ -169,10 +172,8 @@ export default function Feed() {
               hasNext={true}
               liked={isLiked(profile(), String(s.current.id))}
               saved={isSaved(profile(), String(s.current.id))}
-              savedCount={profile().saved.length}
               onToggleLike={() => onToggleLike(s.current)}
               onToggleSave={() => onToggleSave(s.current)}
-              onOpenSaved={() => library.open()}
             />
           );
         })()}

@@ -60,11 +60,8 @@ export type CardProps = {
   liked: boolean;
   /** Whether this card is currently in the user's saved list. */
   saved: boolean;
-  /** Number of total saved articles (for the saved-pill badge). */
-  savedCount: number;
   onToggleLike: () => void;
   onToggleSave: () => void;
-  onOpenSaved: () => void;
 };
 
 export function Card(props: CardProps) {
@@ -167,31 +164,19 @@ export function Card(props: CardProps) {
           <span class={styles["action-label"]}>{props.liked ? "Liked" : "Like"}</span>
         </button>
 
-        <div class={styles["action-save-group"]}>
-          <button
-            type="button"
-            class={styles["action-btn"]}
-            data-active={props.saved}
-            onClick={() => props.onToggleSave()}
-            aria-pressed={props.saved}
-            aria-label={props.saved ? "Remove from saved" : "Save article"}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill={props.saved ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
-              <path d="M6 4h12v17l-6-4-6 4z" />
-            </svg>
-            <span class={styles["action-label"]}>{props.saved ? "Saved" : "Save"}</span>
-          </button>
-          <Show when={props.savedCount > 0}>
-            <button
-              type="button"
-              class={styles["action-saved-count"]}
-              onClick={() => props.onOpenSaved()}
-              aria-label={`Open saved list (${props.savedCount})`}
-            >
-              {props.savedCount}
-            </button>
-          </Show>
-        </div>
+        <button
+          type="button"
+          class={styles["action-btn"]}
+          data-active={props.saved}
+          onClick={() => props.onToggleSave()}
+          aria-pressed={props.saved}
+          aria-label={props.saved ? "Remove from saved" : "Save article"}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill={props.saved ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M6 4h12v17l-6-4-6 4z" />
+          </svg>
+          <span class={styles["action-label"]}>{props.saved ? "Saved" : "Save"}</span>
+        </button>
 
         <button
           type="button"

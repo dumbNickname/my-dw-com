@@ -13,6 +13,7 @@
  */
 import { For, Show, createEffect, createSignal, onCleanup } from "solid-js";
 
+import { resolveImage } from "~/lib/image";
 import type { LibraryItem } from "~/lib/profile";
 
 import styles from "./LibrarySheet.module.css";
@@ -32,6 +33,18 @@ const buildDwLink = (s: LibraryItem): string => {
   if (s.namedUrl) return `https://www.dw.com${s.namedUrl}`;
   const slug = (s.lang || "ENGLISH").toLowerCase().slice(0, 2);
   return `https://www.dw.com/${slug}/a-${s.id}`;
+};
+
+/**
+ * Resolve a snapshot image URL safely. Newer snapshots have the
+ * `${formatId}` placeholder already substituted at write-time. Older
+ * entries (saved before that fix) still contain the literal placeholder
+ * — substitute it here so they render correctly without re-saving.
+ */
+const resolveRowImage = (raw: string | null): string | undefined => {
+  if (!raw) return undefined;
+  if (!raw.includes("${formatId}")) return raw;
+  return resolveImage(raw, "80X", 80);
 };
 
 export function LibrarySheet(props: Props) {
@@ -139,8 +152,8 @@ export function LibrarySheet(props: Props) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    <Show when={item.image}>
-                      <img class={styles["sheet-row-img"]} src={item.image!} alt="" loading="lazy" />
+                    <Show when={resolveRowImage(item.image)}>
+                      <img class={styles["sheet-row-img"]} src={resolveRowImage(item.image)!} alt="" loading="lazy" />
                     </Show>
                     <div class={styles["sheet-row-body"]}>
                       <Show when={item.kicker}>
