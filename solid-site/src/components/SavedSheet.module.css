@@ -1,0 +1,187 @@
+/* Bottom-sheet that lists saved articles. Opens from the Save pill. */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 19, 54, 0.55);
+  z-index: 50;
+  animation: backdropFade var(--dur-base) var(--ease-out);
+}
+:global([data-theme="dark"]) .sheet-backdrop {
+  background: rgba(0, 0, 0, 0.7);
+}
+@keyframes backdropFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 80dvh;
+  background: var(--c-surface);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  box-shadow: 0 -10px 40px -10px rgba(8, 19, 54, 0.25);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  animation: sheetUp var(--dur-base) var(--ease-out);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@media (min-width: 720px) {
+  .sheet {
+    left: 50%;
+    right: auto;
+    bottom: 50%;
+    transform: translate(-50%, 50%);
+    width: min(560px, 90vw);
+    max-height: 70dvh;
+    border-radius: var(--radius-lg);
+    animation: sheetCenter var(--dur-base) var(--ease-out);
+  }
+  @keyframes sheetCenter {
+    from { transform: translate(-50%, 60%); opacity: 0; }
+    to   { transform: translate(-50%, 50%); opacity: 1; }
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--c-border);
+}
+.sheet-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--c-text);
+}
+.sheet-count {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary);
+  color: var(--c-primary-ink);
+}
+.sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  color: var(--c-text-mute);
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.sheet-close:hover {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+}
+
+.sheet-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.sheet-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 4px 12px;
+}
+.sheet-row + .sheet-row {
+  border-top: 1px solid var(--c-border);
+}
+.sheet-row-link {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 8px;
+  border-radius: var(--radius-md);
+  transition: background var(--dur-fast) var(--ease-out);
+  min-width: 0;
+}
+.sheet-row-link:hover {
+  background: var(--c-surface-2);
+}
+.sheet-row-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+  flex-shrink: 0;
+}
+.sheet-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.sheet-row-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--c-primary);
+}
+.sheet-row-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--c-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.sheet-row-remove {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  color: var(--c-text-mute);
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+  flex-shrink: 0;
+}
+.sheet-row-remove:hover {
+  background: var(--c-surface-2);
+  color: var(--c-skip);
+}
+
+.sheet-empty {
+  padding: 28px 24px 36px;
+  text-align: center;
+  color: var(--c-text-mute);
+}
+.sheet-empty strong {
+  color: var(--c-text);
+  display: block;
+  margin-bottom: 6px;
+}
+.sheet-empty p {
+  margin: 0;
+  font-size: 14px;
+}

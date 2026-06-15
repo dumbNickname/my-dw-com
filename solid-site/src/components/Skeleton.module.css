@@ -1,0 +1,86 @@
+/* Loading-skeleton primitives. CSS-only shimmer; collapses under
+ * prefers-reduced-motion (handled by the global override). */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--c-surface-2);
+  border-radius: var(--radius-md);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--c-text) 6%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-img {
+  aspect-ratio: 16 / 9;
+  border-radius: 0;
+}
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--radius-sm);
+}
+.skeleton-line + .skeleton-line {
+  margin-top: 10px;
+}
+.skeleton-line.short {
+  width: 50%;
+}
+.skeleton-line.med {
+  width: 75%;
+}
+
+/* Self-contained card-shaped wrapper for CardSkeleton so it doesn't have
+ * to import Card.module.css just for the outer frame. */
+.card-shell {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.card-shell-body {
+  padding: 24px 24px 28px;
+}
+
+/* Same idea for CarouselSkeleton — minimal carousel-shaped wrappers so
+ * the loading state stays independent of CarouselCard.module.css. */
+.carousel-shell {
+  display: flex;
+  gap: 12px;
+  overflow-x: hidden;
+  padding: 4px 2px 12px;
+  margin: 0 -4px;
+}
+.carousel-item-shell {
+  flex: 0 0 220px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--c-surface-2);
+  display: flex;
+  flex-direction: column;
+}
+.carousel-item-body-shell {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+

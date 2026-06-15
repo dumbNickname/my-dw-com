@@ -13,13 +13,15 @@ import { Title } from "@solidjs/meta";
 import { useNavigate } from "@solidjs/router";
 import { createEffect, createSignal, For, on, onMount, Show } from "solid-js";
 
-import { CarouselCard } from "~/components/CarouselCard";
+import { CarouselCard, carouselStyles } from "~/components/CarouselCard";
 import { CarouselSkeleton } from "~/components/Skeleton";
 import categoriesData from "~/data/categories.json";
 import regionsData from "~/data/regions.json";
 import { fetchCard, type CardContent } from "~/lib/graphql";
 import * as peach from "~/lib/peach";
 import { isOnboarded, load, save, type Profile } from "~/lib/profile";
+
+import styles from "./index.module.css";
 
 const TRENDING_AMOUNT = 10;
 const FETCH_PARALLEL = 6;
@@ -114,26 +116,9 @@ export default function Onboarding() {
     <div class="shell">
       <Title>my.dw.com — pick what to read</Title>
 
-      <header style={{ "margin-bottom": "8px" }}>
-        <h1
-          style={{
-            "font-size": "clamp(28px, 5vw, 36px)",
-            "font-weight": 700,
-            "letter-spacing": "-0.02em",
-            "line-height": 1.15,
-            margin: "0 0 8px",
-          }}
-        >
-          Tell us what to read.
-        </h1>
-        <p
-          style={{
-            color: "var(--c-text-mute)",
-            "font-size": "16px",
-            "max-width": "55ch",
-            margin: 0,
-          }}
-        >
+      <header class={styles.intro}>
+        <h1>Tell us what to read.</h1>
+        <p>
           Pick a few topics, regions, or stories that look interesting. We use
           this only on this device, no account required.
         </p>
@@ -141,12 +126,12 @@ export default function Onboarding() {
 
       <section class="section-block">
         <h2 class="section-title">Topics</h2>
-        <div class="chip-row">
+        <div class={styles["chip-row"]}>
           <For each={CATEGORIES}>
             {(c) => (
               <button
                 type="button"
-                class="chip"
+                class={styles.chip}
                 data-selected={profile().categories.includes(c.id)}
                 aria-pressed={profile().categories.includes(c.id)}
                 onClick={() => toggleCategory(c.id)}
@@ -160,12 +145,12 @@ export default function Onboarding() {
 
       <section class="section-block">
         <h2 class="section-title">Regions</h2>
-        <div class="chip-row">
+        <div class={styles["chip-row"]}>
           <For each={REGIONS}>
             {(r) => (
               <button
                 type="button"
-                class="chip"
+                class={styles.chip}
                 data-selected={profile().regions.includes(r.id)}
                 aria-pressed={profile().regions.includes(r.id)}
                 onClick={() => toggleRegion(r.id)}
@@ -198,7 +183,7 @@ export default function Onboarding() {
               </div>
             }
           >
-            <div class="carousel">
+            <div class={carouselStyles.carousel}>
               <For each={trending()}>
                 {(c) => (
                   <CarouselCard
@@ -213,14 +198,7 @@ export default function Onboarding() {
         </Show>
       </section>
 
-      <div
-        style={{
-          display: "flex",
-          "justify-content": "flex-end",
-          gap: "12px",
-          padding: "8px 0 16px",
-        }}
-      >
+      <div class={styles["start-row"]}>
         <button
           type="button"
           class="btn btn-primary"

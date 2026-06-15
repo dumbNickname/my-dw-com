@@ -12,6 +12,8 @@ import { For, Show, createEffect, onCleanup } from "solid-js";
 
 import type { SavedItem } from "~/lib/profile";
 
+import styles from "./SavedSheet.module.css";
+
 type Props = {
   open: boolean;
   items: SavedItem[];
@@ -43,22 +45,22 @@ export function SavedSheet(props: Props) {
 
   return (
     <Show when={props.open}>
-      <div class="sheet-backdrop" onClick={() => props.onClose()} aria-hidden="true" />
+      <div class={styles["sheet-backdrop"]} onClick={() => props.onClose()} aria-hidden="true" />
       <aside
-        class="sheet"
+        class={styles.sheet}
         role="dialog"
         aria-modal="true"
         aria-label="Saved articles"
         onClick={(e) => e.stopPropagation()}
       >
-        <header class="sheet-head">
-          <h2 class="sheet-title">
+        <header class={styles["sheet-head"]}>
+          <h2 class={styles["sheet-title"]}>
             Saved
-            <span class="sheet-count">{props.items.length}</span>
+            <span class={styles["sheet-count"]}>{props.items.length}</span>
           </h2>
           <button
             type="button"
-            class="sheet-close"
+            class={styles["sheet-close"]}
             onClick={() => props.onClose()}
             aria-label="Close saved list"
           >
@@ -71,35 +73,35 @@ export function SavedSheet(props: Props) {
         <Show
           when={props.items.length > 0}
           fallback={
-            <div class="sheet-empty">
+            <div class={styles["sheet-empty"]}>
               <strong>Nothing saved yet.</strong>
               <p>Tap the bookmark icon on any card to keep it for later.</p>
             </div>
           }
         >
-          <ul class="sheet-list">
+          <ul class={styles["sheet-list"]}>
             <For each={props.items}>
               {(item) => (
-                <li class="sheet-row">
+                <li class={styles["sheet-row"]}>
                   <a
-                    class="sheet-row-link"
+                    class={styles["sheet-row-link"]}
                     href={buildDwLink(item)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <Show when={item.image}>
-                      <img class="sheet-row-img" src={item.image!} alt="" loading="lazy" />
+                      <img class={styles["sheet-row-img"]} src={item.image!} alt="" loading="lazy" />
                     </Show>
-                    <div class="sheet-row-body">
+                    <div class={styles["sheet-row-body"]}>
                       <Show when={item.kicker}>
-                        <span class="sheet-row-kicker">{item.kicker}</span>
+                        <span class={styles["sheet-row-kicker"]}>{item.kicker}</span>
                       </Show>
-                      <span class="sheet-row-title">{item.title}</span>
+                      <span class={styles["sheet-row-title"]}>{item.title}</span>
                     </div>
                   </a>
                   <button
                     type="button"
-                    class="sheet-row-remove"
+                    class={styles["sheet-row-remove"]}
                     onClick={() => props.onRemove(item.id)}
                     aria-label={`Remove ${item.title}`}
                   >

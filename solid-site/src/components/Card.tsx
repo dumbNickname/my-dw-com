@@ -24,6 +24,8 @@ import { fetchBody } from "~/lib/graphql";
 import { htmlToParagraphs } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
 
+import styles from "./Card.module.css";
+
 const formatRelative = (iso: string | null | undefined): string => {
   if (!iso) return "";
   const then = new Date(iso).getTime();
@@ -96,10 +98,10 @@ export function Card(props: CardProps) {
   }
 
   return (
-    <article class="feed-card" aria-label={props.content.title || "Article"}>
+    <article class={styles["feed-card"]} aria-label={props.content.title || "Article"}>
       <Show when={img()}>
         <img
-          class="feed-card-img"
+          class={styles["feed-card-img"]}
           src={img()}
           alt=""
           loading="eager"
@@ -108,12 +110,12 @@ export function Card(props: CardProps) {
         />
       </Show>
 
-      <div class="feed-card-body">
-        <div class="feed-card-meta">
+      <div class={styles["feed-card-body"]}>
+        <div class={styles["feed-card-meta"]}>
           <Show when={props.content.roadTeaserKicker}>
-            <span class="feed-card-kicker">{props.content.roadTeaserKicker}</span>
+            <span class={styles["feed-card-kicker"]}>{props.content.roadTeaserKicker}</span>
           </Show>
-          <span class="feed-card-lang" title={props.content.language || ""}>
+          <span class={styles["feed-card-lang"]} title={props.content.language || ""}>
             {langShort(props.content.language)}
           </span>
           <Show when={props.content.contentDate}>
@@ -124,19 +126,19 @@ export function Card(props: CardProps) {
           </Show>
         </div>
 
-        <h1 class="feed-card-title">{props.content.title}</h1>
+        <h1 class={styles["feed-card-title"]}>{props.content.title}</h1>
 
         <Show when={summaryText(props.content)}>
-          <p class="feed-card-summary">{summaryText(props.content)}</p>
+          <p class={styles["feed-card-summary"]}>{summaryText(props.content)}</p>
         </Show>
 
         <Show when={expanded()}>
-          <div class="feed-card-body-text" aria-live="polite">
+          <div class={styles["feed-card-body-text"]} aria-live="polite">
             <Show when={bodyLoading()}>
-              <p class="feed-card-body-status">Loading…</p>
+              <p class={styles["feed-card-body-status"]}>Loading…</p>
             </Show>
             <Show when={!bodyLoading() && bodyError()}>
-              <p class="feed-card-body-status">
+              <p class={styles["feed-card-body-status"]}>
                 Couldn't load the full article.{" "}
                 <a class="canon-link" href={dwLink()} target="_blank" rel="noopener noreferrer">
                   Open on dw.com ↗
@@ -150,10 +152,10 @@ export function Card(props: CardProps) {
         </Show>
       </div>
 
-      <nav class="action-bar" aria-label="Article actions">
+      <nav class={styles["action-bar"]} aria-label="Article actions">
         <button
           type="button"
-          class="action-btn"
+          class={styles["action-btn"]}
           data-active={props.liked}
           onClick={() => props.onToggleLike()}
           aria-pressed={props.liked}
@@ -162,13 +164,13 @@ export function Card(props: CardProps) {
           <svg width="22" height="22" viewBox="0 0 24 24" fill={props.liked ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
             <path d="M12 21s-7-4.35-9.5-8.5C.5 9 2 5 5.5 5c2 0 3.5 1.2 4.5 2.5C11 6.2 12.5 5 14.5 5 18 5 19.5 9 17.5 12.5 15 16.65 12 21 12 21z" />
           </svg>
-          <span class="action-label">{props.liked ? "Liked" : "Like"}</span>
+          <span class={styles["action-label"]}>{props.liked ? "Liked" : "Like"}</span>
         </button>
 
-        <div class="action-save-group">
+        <div class={styles["action-save-group"]}>
           <button
             type="button"
-            class="action-btn"
+            class={styles["action-btn"]}
             data-active={props.saved}
             onClick={() => props.onToggleSave()}
             aria-pressed={props.saved}
@@ -177,12 +179,12 @@ export function Card(props: CardProps) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill={props.saved ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
               <path d="M6 4h12v17l-6-4-6 4z" />
             </svg>
-            <span class="action-label">{props.saved ? "Saved" : "Save"}</span>
+            <span class={styles["action-label"]}>{props.saved ? "Saved" : "Save"}</span>
           </button>
           <Show when={props.savedCount > 0}>
             <button
               type="button"
-              class="action-saved-count"
+              class={styles["action-saved-count"]}
               onClick={() => props.onOpenSaved()}
               aria-label={`Open saved list (${props.savedCount})`}
             >
@@ -193,7 +195,7 @@ export function Card(props: CardProps) {
 
         <button
           type="button"
-          class="action-btn"
+          class={styles["action-btn"]}
           data-active={expanded()}
           onClick={() => void handleExpand()}
           aria-expanded={expanded()}
@@ -204,11 +206,11 @@ export function Card(props: CardProps) {
               <path d="M6 9l6 6 6-6" />
             </Show>
           </svg>
-          <span class="action-label">{expanded() ? "Less" : "Read"}</span>
+          <span class={styles["action-label"]}>{expanded() ? "Less" : "Read"}</span>
         </button>
 
         <a
-          class="action-btn action-btn-link"
+          class={`${styles["action-btn"]} ${styles["action-btn-link"]}`}
           href={dwLink()}
           target="_blank"
           rel="noopener noreferrer"
@@ -217,17 +219,17 @@ export function Card(props: CardProps) {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
             <path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" />
           </svg>
-          <span class="action-label">dw.com</span>
+          <span class={styles["action-label"]}>dw.com</span>
         </a>
 
         <button
           type="button"
-          class="action-btn action-btn-primary"
+          class={`${styles["action-btn"]} ${styles["action-btn-primary"]}`}
           onClick={() => props.onNext()}
           disabled={!props.hasNext}
           aria-label="Next article"
         >
-          <span class="action-label">Next</span>
+          <span class={styles["action-label"]}>Next</span>
           <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M5 3l5 5-5 5" />
           </svg>

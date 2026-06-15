@@ -1,0 +1,43 @@
+/* App shell — top-level layout used by the Router root. */
+
+.app-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-size: 18px;
+  color: var(--c-text);
+}
+.brand .brand-dot {
+  color: var(--c-primary);
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 24px 16px 80px;
+}
+
+/* On /feed, give the card more vertical room since there's no header. */
+.app-shell[data-route="feed"] .app-main {
+  padding-top: 16px;
+}

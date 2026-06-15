@@ -1,0 +1,63 @@
+/* Onboarding screen — chips for category / region selection. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+  cursor: pointer;
+  user-select: none;
+}
+.chip:hover {
+  border-color: var(--c-border-strong);
+}
+.chip[data-selected="true"] {
+  background: var(--c-primary);
+  color: var(--c-primary-ink);
+  border-color: var(--c-primary);
+}
+.chip:active {
+  transform: translateY(1px);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Inline header styles previously written via `style={{}}` in the JSX */
+
+.intro {
+  margin-bottom: 8px;
+}
+.intro h1 {
+  font-size: clamp(28px, 5vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0 0 8px;
+}
+.intro p {
+  color: var(--c-text-mute);
+  font-size: 16px;
+  max-width: 55ch;
+  margin: 0;
+}
+
+.start-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 8px 0 16px;
+}
