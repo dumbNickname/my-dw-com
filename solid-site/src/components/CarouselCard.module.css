@@ -4,7 +4,11 @@
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  /* `proximity` rather than `mandatory` so a click-driven restyle of a
+   * carousel item (e.g. data-selected toggle) doesn't cause the browser
+   * to re-snap and jump scroll back to the first item. Proximity only
+   * snaps when the scroll comes to rest near a snap point. */
+  scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   padding: 4px 2px 12px;
   margin: 0 -4px;
