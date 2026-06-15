@@ -239,7 +239,7 @@ solid-site/
     ├── styles/global.css           tokens, resets, shared utilities only
     ├── data/
     │   ├── categories.json         20 topic chips
-    │   ├── regions.json            10 region chips
+    │   ├── regions.json            6 region groups (EUROPE, ASIA, AFRICA, ME, NORTHAMERICA)
     │   ├── languages.json          31 DW languages (enum + native names)
     │   └── query-hashes.json       generated at build time
     ├── lib/
@@ -278,6 +278,17 @@ solid-site/
 - **Worker**: live and verified end-to-end.
 - **Expand**: tap Read on a card → lazy-fetches `MyDwBody`, renders as
   plain paragraphs.
+- **Multi-language pool & carousel (FW4)**: pool candidates carry
+  `{id, lang}` and the feed fetches each in its own language. Both
+  carousel and pool fan out across `profile.langs.slice(0, 3)` and
+  interleave results — a user with EN+DE+ES sees all three mixed.
+- **Recent-views re-mine (FW4b)**: every card render pushes to a FIFO
+  `recent_view_ids[20]` window. Every 5 taps the next refill seeds
+  `peach.similar` on a random sample of recent views — the pool adapts
+  mid-session even without explicit likes. Refill threshold bumped to
+  6 so we top up well before the queue can drain. 60s in-memory cache
+  in `lib/peach.ts` collapses identical calls across back-to-back
+  refills so quota stays under control.
 
 ## 7. What's pending
 

@@ -1,12 +1,7 @@
 [
-  { "id": "region:europe:DE", "name": "Germany" },
-  { "id": "region:europe", "name": "Europe" },
-  { "id": "region:global", "name": "Global" },
-  { "id": "region:northamerica:US", "name": "United States" },
-  { "id": "region:europe:UA", "name": "Ukraine" },
-  { "id": "region:europe:RU", "name": "Russia" },
-  { "id": "region:me:IR", "name": "Iran" },
-  { "id": "region:me", "name": "Middle East" },
-  { "id": "region:asia:CN", "name": "China" },
-  { "id": "region:africa", "name": "Africa" }
+  { "id": "EUROPE", "name": "Europe" },
+  { "id": "ASIA", "name": "Asia" },
+  { "id": "AFRICA", "name": "Africa" },
+  { "id": "ME", "name": "Middle East" },
+  { "id": "NORTHAMERICA", "name": "North America" }
 ]

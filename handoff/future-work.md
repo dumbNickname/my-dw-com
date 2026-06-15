@@ -55,87 +55,7 @@ Blocked today by R7 (`_pc_c` cookie unavailable on `*.github.io`).
 
 ---
 
-## FW4 — Multi-language pool & carousel fan-out (BUG, post-MVP)
-
-**Symptom**: a user who selects three languages in onboarding sees:
-- The trending carousel re-render in **only the last-clicked language**
-  (`langs[0]`), not a mix.
-- The feed pool fetch `most-viewed`, `trending_tz`, `similar`, and
-  `untagger_detail` **only in `langs[0]`** — so picking three languages
-  silently behaves like picking one.
-
-**Where it lives**:
-- `solid-site/src/routes/index.tsx` — `createEffect(on(() =>
-  profile().langs[0] || "ENGLISH", ...))` for the carousel.
-- `solid-site/src/lib/pool.ts` — `const lang = profile.langs[0] ||
-  "ENGLISH"` for every lang-aware PEACH call.
-
-**Fix shape**:
-1. Carousel: fan out `peach.mostViewed(lang)` across
-   `profile.langs.slice(0, 3)`, interleave round-robin so each language
-   is represented proportionally, dedupe by `content_id`. ~10 cards
-   total. Don't re-fetch when the user just reorders the same set of
-   languages; re-fetch only when membership changes.
-2. Pool: same fan-out for every lang-aware source. Cap at 3 languages
-   to keep parallel calls bounded.
-3. GraphQL `fetchCard(id, lang)` uses the **card's own language**, not
-   the user's primary. The card-language badge already exists in the
-   UI; reading multi-language content in one feed is the whole point.
-
-**Open question**: do we want per-language balancing in the queue
-(e.g. round-robin so the user doesn't get 5 Spanish cards in a row), or
-just dedup + shuffle? Probably round-robin once we have it, since
-language switching is the differentiator vs `dw.com`. Worth a small UX
-test.
-
----
-
-## FW4b — Pool runs out fast and feels stale (BUG, post-MVP)
-
-**Symptom**: tapping "Next" repeatedly drains the pool quickly. Once
-the queue empties, the empty-state "You've seen everything" appears
-even though there's plenty of content the user hasn't been served. The
-implicit-interest signal (which articles you actually read past) goes
-unused.
-
-**Root causes**:
-1. `lib/pool.ts` refills only when `queue.length <= REFILL_THRESHOLD`
-   (currently 3). The refill fetches the same fixed source set
-   (`trending_by_category`, `trending_by_region`, `similar` from
-   onboarding seeds + recent likes, `trending_tz`, `most-viewed`) —
-   nothing about it adapts to mid-session reading.
-2. There's no rolling window of "recently shown ids". `seen_ids` is a
-   permanent FIFO-500 dedup list, useful only for exclusion.
-3. If the user doesn't tap Like, none of their reading produces a
-   similarity seed. So a user who just keeps tapping Next gets a feed
-   that never learns from what's actually on screen.
-
-**Fix shape**:
-1. **Recent-views window**: add `recent_view_ids: string[]` to the
-   profile, capped at ~20 newest-first. Push on every card render
-   (i.e. wherever we currently call `markSeen`). Independent from
-   `seen_ids` — recent_view drives recommendations, seen_ids only
-   dedups.
-2. **Periodic re-mine**: every N taps (suggest N=5; tunable), call
-   `peach.similar(id, lang)` on 2–3 random entries from
-   `recent_view_ids` and inject the results into the pool. This makes
-   the feed *adapt* mid-session even without explicit likes.
-3. **Earlier refill**: bump `REFILL_THRESHOLD` to 6 or refill in the
-   background as soon as we cross the halfway mark of the previous
-   batch. Worst case the user never sees the queue empty.
-4. **Refill should not duplicate sources every time**: today every
-   refill re-fetches `trending_by_category` for the same chips. Cache
-   per-source results for ~60s so back-to-back refills don't burn
-   PEACH quota — diversity comes from `recent_view_ids` similarity
-   anyway.
-
-**Pairs with FW4**: once both ship, multi-lang users get a healthy mix
-of languages AND the pool stays fresh based on what they actually
-read.
-
----
-
-## FW5 — Saved-as-signal endpoint
+## FW4 — Saved-as-signal endpoint
 
 **Why**: "save" is typically the strongest positive signal a reader
 emits. Today it only feeds the LibrarySheet; the pool doesn't use it.
@@ -151,7 +71,7 @@ the stronger signal but saves are still positive.
 
 ---
 
-## FW6 — `user_history`-based dedup
+## FW5 — `user_history`-based dedup
 
 **Why**: MVP dedups via local `seen_ids` only. With FW1 + FW2 we can
 call `/v2/user_history?user_id=<mydw_id>&amount=200` to get globally-
@@ -160,7 +80,7 @@ roams across devices.
 
 ---
 
-## FW7 — Teacher mode
+## FW6 — Teacher mode
 
 **User story**: "I'm a teacher and want classroom-ready DW content I
 can share with students."
@@ -179,7 +99,7 @@ the GraphQL metadata. Today's `genre` field is sparse.
 
 ---
 
-## FW8 — Language-learner mode
+## FW7 — Language-learner mode
 
 **User story**: "I'm B1 German and want news I can actually read."
 
@@ -198,7 +118,7 @@ lookup.
 
 ---
 
-## FW9 — "Why am I seeing this?" attribution
+## FW8 — "Why am I seeing this?" attribution
 
 **Why**: lifts the "it learns" demo moment from implicit to explicit.
 
@@ -212,7 +132,7 @@ complexity to the pool builder and the wrong copy can hurt trust.
 
 ---
 
-## FW10 — Dynamic chip taxonomy
+## FW9 — Dynamic chip taxonomy
 
 **Why**: MVP ships a static category list that may drift from DW's
 actual newsroom focus.
@@ -224,7 +144,7 @@ static list on failure.
 
 ---
 
-## FW11 — Cross-device sync via QR
+## FW10 — Cross-device sync via QR
 
 **Why**: device-bound profile feels like a regression once people use
 the app on phone + laptop.
@@ -235,7 +155,7 @@ No auth, no backend.
 
 ---
 
-## FW12 — Embedded video / audio / liveblog rendering
+## FW11 — Embedded video / audio / liveblog rendering
 
 **Why**: MVP strips them with a placeholder. Honest cut but limits UX
 for DW's video-heavy content.
@@ -251,7 +171,7 @@ Pairs with M3 (detail view + DOMPurify body sanitiser).
 
 ---
 
-## FW13 — Daily streak freeze tokens
+## FW12 — Daily streak freeze tokens
 
 **Why**: MVP design resets streak on miss. Real engagement loops use
 forgiveness mechanics.
@@ -261,7 +181,7 @@ Auto-consumed on miss.
 
 ---
 
-## FW14 — User-controlled "vibe" chip (Untagger Tier B)
+## FW13 — User-controlled "vibe" chip (Untagger Tier B)
 
 **Why**: the M2 untagger work uses dimensions passively to learn the
 user's preference. A user-facing chip lets the user *choose* their mood.
@@ -280,7 +200,7 @@ loop (M2 proper) has telemetry to compare against.
 
 ---
 
-## FW15 — Time-of-day soft tilt on dimensions (Untagger Tier C)
+## FW14 — Time-of-day soft tilt on dimensions (Untagger Tier C)
 
 **Why**: cold-start users have empty `dimension_pref`. A free signal —
 local time of day — can softly tilt the random uniform pick.

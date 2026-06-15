@@ -6,9 +6,12 @@
  *      rest. On first visit we pre-select the browser's preferred
  *      DW-supported language (falling back to ENGLISH).
  *   2. Categories: 20 chips from src/data/categories.json.
- *   3. Regions: 10 chips from src/data/regions.json.
- *   4. Trending carousel: ~10 cards from /v2/most-viewed via per-id
- *      GraphQL (refetches when the first-selected language changes).
+ *   3. Regions: 6 chips from src/data/regions.json.
+ *   4. Trending carousel: ~10 cards, fanned out across the user's
+ *      selected languages (top 3) and interleaved round-robin so each
+ *      language is represented (FW4). Refetches when the SET of
+ *      selected languages changes; chip-reorders that just bump
+ *      langs[0] do not re-fetch.
  *   5. Mandatory: ≥1 chip OR ≥1 carousel tap. Then "Start reading" → /feed.
  *
  * Selections write to localStorage profile and the feed picks up from there.
@@ -34,6 +37,8 @@ import { isOnboarded, load, save, type Profile } from "~/lib/profile";
 import styles from "./index.module.css";
 
 const TRENDING_AMOUNT = 10;
+const TRENDING_PER_LANG = 5;     // fetch this many ids per selected language
+const TRENDING_LANG_FANOUT = 3;  // cap on number of languages we query
 const FETCH_PARALLEL = 6;
 
 type Item = { id: string; name: string };
@@ -41,15 +46,59 @@ type Item = { id: string; name: string };
 const CATEGORIES = categoriesData as Item[];
 const REGIONS = regionsData as Item[];
 
-async function loadTrendingCards(lang: string): Promise<CardContent[]> {
-  const ids = await peach.mostViewed(lang, TRENDING_AMOUNT);
-  if (ids.length === 0) return [];
+/**
+ * Interleave several arrays round-robin so each input is represented
+ * proportionally in the output. ["a1","a2"], ["b1","b2"], ["c1"] →
+ * ["a1","b1","c1","a2","b2"]. Used to mix per-language trending lists.
+ */
+function interleave<T>(lists: T[][]): T[] {
+  const out: T[] = [];
+  const max = lists.reduce((n, l) => Math.max(n, l.length), 0);
+  for (let i = 0; i < max; i++) {
+    for (const list of lists) {
+      if (i < list.length) out.push(list[i]);
+    }
+  }
+  return out;
+}
+
+/**
+ * Load a multi-language trending carousel.
+ *
+ * For each selected language (capped at TRENDING_LANG_FANOUT), pull
+ * TRENDING_PER_LANG candidates from `/v2/most-viewed`, dedup by id,
+ * interleave round-robin so the user sees the languages mixed rather
+ * than blocked. Each card is then GraphQL-fetched in its own language.
+ */
+async function loadTrendingCards(langs: string[]): Promise<CardContent[]> {
+  const selected = langs.slice(0, TRENDING_LANG_FANOUT);
+  if (selected.length === 0) return [];
+
+  const perLang = await Promise.all(
+    selected.map((l) => peach.mostViewed({ lang: l, amount: TRENDING_PER_LANG })),
+  );
+
+  // Interleave then dedupe (keep first occurrence). Cap at TRENDING_AMOUNT.
+  const interleaved = interleave(perLang);
+  const seen = new Set<string>();
+  const candidates: { id: string; lang: string }[] = [];
+  for (const c of interleaved) {
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    candidates.push(c);
+    if (candidates.length >= TRENDING_AMOUNT) break;
+  }
+  if (candidates.length === 0) return [];
+
   // Fetch in small parallel batches so we do not block the first paint
-  // behind a single slow request.
+  // behind a single slow request. Each card is fetched in its own
+  // language so the GraphQL miss-rate stays low.
   const out: CardContent[] = [];
-  for (let i = 0; i < ids.length; i += FETCH_PARALLEL) {
-    const slice = ids.slice(i, i + FETCH_PARALLEL);
-    const settled = await Promise.allSettled(slice.map((id) => fetchCard(id, lang)));
+  for (let i = 0; i < candidates.length; i += FETCH_PARALLEL) {
+    const slice = candidates.slice(i, i + FETCH_PARALLEL);
+    const settled = await Promise.allSettled(
+      slice.map((c) => fetchCard(c.id, c.lang)),
+    );
     for (const r of settled) {
       if (r.status === "fulfilled" && r.value) out.push(r.value);
     }
@@ -96,14 +145,20 @@ export default function Onboarding() {
     }
   });
 
-  // (Re)load the trending carousel whenever the primary language changes.
+  // Re-load the trending carousel whenever the SET of selected
+  // languages changes (capped at TRENDING_LANG_FANOUT). Pure re-orders
+  // are ignored to avoid a fetch on every chip tap that just re-shuffles
+  // langs[0].
   createEffect(
     on(
-      () => profile().langs[0] || "ENGLISH",
-      (lang) => {
+      () => {
+        const cap = profile().langs.slice(0, 3);
+        return [...cap].sort().join(",");
+      },
+      () => {
         setTrendingLoading(true);
         setTrendingError(false);
-        loadTrendingCards(lang)
+        loadTrendingCards(profile().langs)
           .then((cards) => {
             setTrending(cards);
             setTrendingError(cards.length === 0);
@@ -119,9 +174,10 @@ export default function Onboarding() {
 
   /**
    * Toggle a language. Always keep at least one selected. The most
-   * recently added language becomes langs[0] (drives trending / similar /
-   * most-viewed) so the UX feels live: tap German → carousel reloads
-   * in German.
+   * recently added language becomes langs[0] (drives `similar`,
+   * `trending_tz`, etc. as the "primary" lang). The carousel re-fetches
+   * only when the SET of selected languages changes; pure reorders are
+   * a no-op for the carousel.
    */
   const toggleLang = (e: string) => {
     setProfile((p) => {

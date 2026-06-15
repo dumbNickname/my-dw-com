@@ -1,31 +1,67 @@
 /**
- * Pool = a per-session queue of content_ids the feed will hand out.
+ * Pool = a per-session queue of (content_id, language) candidates the
+ * feed will hand out.
  *
- * M1 scope: cold-start only.
- *   - Sources: trending_by_category (user picks), trending_by_region (user
- *     picks), `similar` seeded by onboarding-tapped articles. Falls back to
- *     trending_tz / most-viewed when those come back empty.
- *   - No source weighting, no bandit, no untagger. Those land in M2.
- *   - Dedup against profile.seen_ids (FIFO 500).
- *   - Refills automatically when running low.
+ * Each candidate carries its language because PEACH returns content in
+ * many languages and the GraphQL `fetchCard(id, lang)` MUST be called
+ * with the card's own language to get content back. The feed renders
+ * the pool in queue order, so the user sees a natural mix of languages
+ * from selected sources (FW4).
  *
- * Per-source fetches run in parallel; the pool is a Set keyed by content_id
- * so duplicates collapse naturally.
+ * Sources (per refill, fanned out across `profile.langs.slice(0, 3)`):
+ *   1. `most-viewed?lang=X&categories=A,B,C` per lang — popularity
+ *      bucket scoped to the user's onboarding-picked categories.
+ *   2. `most-viewed?lang=X&regions=R,S` per lang — same shape for
+ *      regions. Categories and regions can NOT be combined in one
+ *      `most-viewed` call (Redis bucketing on the prod side); we issue
+ *      separate calls and merge.
+ *   3. `most-viewed?lang=X` per lang — unfiltered popularity baseline,
+ *      a safety net so the feed never goes empty if the user's chips
+ *      have thin buckets right now.
+ *   4. `trending_tz?lang=X&timezone=...` per lang — fresh trending.
+ *   5. `similar?ids=<seed>&lang=primary` per onboarding-tapped article
+ *      and per recent like — explicit interest signals.
+ *   6. `similar?ids=<recent_view>&lang=primary` per random recent
+ *      view, ONLY when `seedFromRecent` is passed (the FW4b re-mine
+ *      path). Implicit-interest signal — keeps the pool fresh on what
+ *      the user is actually reading.
+ *
+ * Each refill is debounced via `state.refilling`. The 60s cache in
+ * `peach.ts` collapses identical calls so back-to-back refills don't
+ * burn quota.
+ *
+ * `REFILL_THRESHOLD` is intentionally generous (FW4b) so we start the
+ * next batch well before the user can drain the queue.
+ *
+ * No source weighting yet — that's M2 proper (bandit).
  */
 import * as peach from "./peach";
+import type { Candidate } from "./peach";
 import type { Profile } from "./profile";
 
-const REFILL_THRESHOLD = 3; // start refilling when fewer than this remain
+const REFILL_THRESHOLD = 6;
 const PER_SOURCE_AMOUNT = 8;
+const LANG_FANOUT = 3;
+const SEED_RECENT_AMOUNT = 3;
+const SEED_LIKED_AMOUNT = 3;
+const SEED_ONBOARDING_AMOUNT = 3;
 
 export type PoolState = {
-  queue: string[]; // content_ids in display order
-  lang: string;
+  queue: Candidate[];
   refilling: boolean;
 };
 
-export function createPool(lang: string): PoolState {
-  return { queue: [], lang, refilling: false };
+export type RefillOpts = {
+  /**
+   * If provided, additionally seeds the refill with `peach.similar`
+   * calls on a small random sample of these ids (the "re-mine" path).
+   * Typically `profile.recent_view_ids`.
+   */
+  seedFromRecent?: string[];
+};
+
+export function createPool(): PoolState {
+  return { queue: [], refilling: false };
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -37,48 +73,76 @@ function shuffle<T>(arr: T[]): T[] {
   return out;
 }
 
-function pickRandom<T>(arr: T[]): T | undefined {
-  if (arr.length === 0) return undefined;
-  return arr[Math.floor(Math.random() * arr.length)];
+function pickRandom<T>(arr: T[], n: number): T[] {
+  if (arr.length <= n) return arr.slice();
+  return shuffle(arr).slice(0, n);
 }
 
-async function fetchColdStartCandidates(profile: Profile): Promise<string[]> {
-  const lang = profile.langs[0] || "ENGLISH";
+function langList(profile: Profile): string[] {
+  const ls = profile.langs.length > 0 ? profile.langs : ["ENGLISH"];
+  return ls.slice(0, LANG_FANOUT);
+}
+
+async function fetchCandidates(
+  profile: Profile,
+  opts: RefillOpts,
+): Promise<Candidate[]> {
+  const langs = langList(profile);
+  const primaryLang = langs[0];
   const tz = peach.browserTimezone();
 
-  const requests: Promise<string[]>[] = [];
+  const requests: Promise<Candidate[]>[] = [];
 
-  // Onboarding categories → trending_by_category
-  for (const cat of profile.categories.slice(0, 3)) {
-    requests.push(peach.trendingByCategory(cat, PER_SOURCE_AMOUNT));
+  for (const lang of langs) {
+    // Categories bucket — popularity within the user's picked topics.
+    if (profile.categories.length > 0) {
+      requests.push(
+        peach.mostViewed({
+          lang,
+          categories: profile.categories,
+          amount: PER_SOURCE_AMOUNT,
+        }),
+      );
+    }
+    // Regions bucket — popularity within the user's picked regions.
+    if (profile.regions.length > 0) {
+      requests.push(
+        peach.mostViewed({
+          lang,
+          regions: profile.regions,
+          amount: PER_SOURCE_AMOUNT,
+        }),
+      );
+    }
+    // Unfiltered popularity baseline + fresh trending. Kept even when
+    // chips are present so the feed never starves on a thin bucket.
+    requests.push(peach.mostViewed({ lang, amount: PER_SOURCE_AMOUNT }));
+    requests.push(peach.trendingTz(lang, tz, PER_SOURCE_AMOUNT));
   }
 
-  // Onboarding regions → trending_by_region
-  for (const region of profile.regions.slice(0, 2)) {
-    requests.push(peach.trendingByRegion(region, PER_SOURCE_AMOUNT));
+  // Onboarding-tapped articles → similar in their own language only.
+  // (Each seed already has a language; cross-lang `similar` rarely
+  // returns useful neighbours.)
+  for (const seed of profile.seed_ids.slice(0, SEED_ONBOARDING_AMOUNT)) {
+    requests.push(peach.similar(seed, primaryLang, PER_SOURCE_AMOUNT));
   }
 
-  // Onboarding-tapped articles → similar
-  for (const seed of profile.seed_ids.slice(0, 3)) {
-    requests.push(peach.similar(seed, lang, PER_SOURCE_AMOUNT));
+  // Recently-liked articles → similar.
+  for (const item of profile.liked.slice(0, SEED_LIKED_AMOUNT)) {
+    requests.push(peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT));
   }
 
-  // Recently liked articles → similar. Stronger signal than seed_ids
-  // (explicit user action mid-session) so we boost off these too. The
-  // `liked` array is newest-first, so .slice(0, 3) gives us the freshest
-  // interests. Capped at 3 to keep total parallel fetches bounded.
-  for (const item of profile.liked.slice(0, 3)) {
-    requests.push(peach.similar(item.id, lang, PER_SOURCE_AMOUNT));
+  // FW4b re-mine: implicit-interest signal from what the user is
+  // actually reading right now.
+  if (opts.seedFromRecent && opts.seedFromRecent.length > 0) {
+    const seeds = pickRandom(opts.seedFromRecent, SEED_RECENT_AMOUNT);
+    for (const seedId of seeds) {
+      requests.push(peach.similar(seedId, primaryLang, PER_SOURCE_AMOUNT));
+    }
   }
-
-  // Always include some freshness, even on rich profiles.
-  requests.push(peach.trendingTz(lang, tz, PER_SOURCE_AMOUNT));
-
-  // Fallback popularity baseline. Useful if everything above is empty.
-  requests.push(peach.mostViewed(lang, PER_SOURCE_AMOUNT));
 
   const settled = await Promise.allSettled(requests);
-  const all: string[] = [];
+  const all: Candidate[] = [];
   for (const r of settled) {
     if (r.status === "fulfilled") all.push(...r.value);
   }
@@ -86,52 +150,52 @@ async function fetchColdStartCandidates(profile: Profile): Promise<string[]> {
 }
 
 /**
- * Refill the pool with new candidates, deduping against seen_ids and the
- * current queue. Returns the new queue (does NOT mutate `state`).
+ * Refill the pool with new candidates, deduping against `seen_ids` and
+ * the current queue, and filtering by the user's selected languages.
+ * Returns a new state — does NOT mutate `state`.
  */
-export async function refill(state: PoolState, profile: Profile): Promise<PoolState> {
+export async function refill(
+  state: PoolState,
+  profile: Profile,
+  opts: RefillOpts = {},
+): Promise<PoolState> {
   if (state.refilling) return state;
-  const next: PoolState = { ...state, refilling: true };
+  state = { ...state, refilling: true };
 
   const seen = new Set(profile.seen_ids);
-  const inQueue = new Set(state.queue);
-  const incoming = await fetchColdStartCandidates(profile);
+  const inQueue = new Set(state.queue.map((c) => c.id));
+  const allowedLangs = new Set(langList(profile));
 
-  const fresh: string[] = [];
-  for (const id of shuffle(incoming)) {
-    if (!id) continue;
-    if (seen.has(id)) continue;
-    if (inQueue.has(id)) continue;
-    if (fresh.includes(id)) continue;
-    fresh.push(id);
+  const incoming = await fetchCandidates(profile, opts);
+
+  const fresh: Candidate[] = [];
+  const freshIds = new Set<string>();
+  for (const c of shuffle(incoming)) {
+    if (!c.id) continue;
+    if (!allowedLangs.has(c.lang)) continue;
+    if (seen.has(c.id)) continue;
+    if (inQueue.has(c.id)) continue;
+    if (freshIds.has(c.id)) continue;
+    fresh.push(c);
+    freshIds.add(c.id);
   }
 
   return {
-    ...next,
     queue: [...state.queue, ...fresh],
     refilling: false,
   };
 }
 
 /**
- * Pop the next id off the pool. Caller is responsible for calling refill()
- * when the queue gets short.
+ * Pop the next candidate off the pool. Caller is responsible for
+ * calling refill() when the queue gets short (see `shouldRefill`).
  */
-export function pop(state: PoolState): { id: string | undefined; rest: PoolState } {
-  if (state.queue.length === 0) return { id: undefined, rest: state };
-  const [id, ...rest] = state.queue;
-  return { id, rest: { ...state, queue: rest } };
+export function pop(state: PoolState): { candidate: Candidate | undefined; rest: PoolState } {
+  if (state.queue.length === 0) return { candidate: undefined, rest: state };
+  const [candidate, ...rest] = state.queue;
+  return { candidate, rest: { ...state, queue: rest } };
 }
 
 export function shouldRefill(state: PoolState): boolean {
   return state.queue.length <= REFILL_THRESHOLD && !state.refilling;
 }
-
-// Used in M2+ for dedicated "similar to last liked" boosts. Exported so the
-// feed route can call it directly when it wants more variety.
-export async function similarTo(contentId: string, lang: string): Promise<string[]> {
-  return peach.similar(contentId, lang, PER_SOURCE_AMOUNT);
-}
-
-// Re-export for convenience.
-export { pickRandom };

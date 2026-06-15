@@ -18,6 +18,7 @@
 
 const KEY = "mydw_profile_v1";
 const SEEN_CAP = 500;
+const RECENT_VIEW_CAP = 20;
 const LIBRARY_CAP = 200;
 
 export type LibraryItem = {
@@ -39,7 +40,8 @@ export type Profile = {
   categories: string[]; // selected origin ids
   regions: string[]; // selected origin ids
   seed_ids: string[]; // article ids tapped during onboarding
-  seen_ids: string[]; // FIFO cap SEEN_CAP
+  seen_ids: string[]; // FIFO cap SEEN_CAP — permanent dedup
+  recent_view_ids: string[]; // FIFO cap RECENT_VIEW_CAP — rolling re-mine seed
   liked_ids: string[]; // mirrors `liked` for fast membership checks
   liked: LikedItem[]; // newest-first, cap LIBRARY_CAP
   saved: SavedItem[]; // newest-first, cap LIBRARY_CAP
@@ -52,6 +54,7 @@ const empty = (): Profile => ({
   regions: [],
   seed_ids: [],
   seen_ids: [],
+  recent_view_ids: [],
   liked_ids: [],
   liked: [],
   saved: [],
@@ -99,6 +102,19 @@ export function markSeen(p: Profile, id: string): Profile {
   const seen = [...p.seen_ids, id];
   if (seen.length > SEEN_CAP) seen.splice(0, seen.length - SEEN_CAP);
   return { ...p, seen_ids: seen };
+}
+
+/**
+ * Push `id` to the front of the recent-view window (newest-first), cap
+ * at RECENT_VIEW_CAP. Distinct from `seen_ids`: this is a rolling
+ * signal of what the user is currently reading, used to seed
+ * mid-session `peach.similar` re-mining. Re-rendering the same article
+ * (e.g. opening from the library) bumps it back to the front.
+ */
+export function markViewed(p: Profile, id: string): Profile {
+  const without = p.recent_view_ids.filter((x) => x !== id);
+  const next = [id, ...without].slice(0, RECENT_VIEW_CAP);
+  return { ...p, recent_view_ids: next };
 }
 
 export function isOnboarded(p: Profile): boolean {

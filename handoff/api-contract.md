@@ -43,18 +43,48 @@ enum directly (`lang=ENGLISH`, `lang=GERMAN`). Lowercase ISO codes
 (`lang=en`) return HTTP 200 but empty results. Don't lowercase, don't
 translate.
 
-### 1.1 `/v2/most-viewed`
-- Required: `lang`.
-- Optional: `amount` (default 20), `model_types` (CSV), `category`
-  (CSV), `region` (CSV), `country` (CSV), `safety`.
+### 1.1 `/v2/most-viewed` (the workhorse)
+
+The primary popularity endpoint. Supports lang + topic + region
+filtering in a single call via CSV parameters, and is what the SPA
+uses for almost every cold-start fan-out.
+
+- Required: none. With no filters, returns the unfiltered global top.
+- Optional:
+  - `lang` — GraphQL `Language` enum (`ENGLISH`, `GERMAN`, …). Omit
+    for cross-lang results.
+  - `amount` — default 20.
+  - `categories` — CSV of category origin_ids
+    (e.g. `categories=19990022,19990033` → Politics OR Science).
+    See `solid-site/src/data/categories.json` (top 20 chips).
+  - `regions` — CSV of region group names (`EUROPE`, `ASIA`, `AFRICA`,
+    `ME`, `NORTHAMERICA`). See `solid-site/src/data/regions.json`.
+    NOT the legacy `region:europe:DE` strings.
+  - `countries` — CSV of two-letter country codes (`DE`, `FR`, `BR`).
+  - `model_types` — CSV of `ARTICLE`, `VIDEO`, `AUDIO`, `LIVEBLOG`.
+  - `safety` — `true` switches to a longer (7-day) window for
+    sparser buckets.
 
 ```
-GET /v2/most-viewed?lang=ENGLISH&amount=10
+GET /v2/most-viewed?lang=ENGLISH&categories=19990022,19990033&amount=10
+GET /v2/most-viewed?lang=GERMAN&regions=EUROPE,ASIA&amount=20
 ```
+
+**Param-name gotcha**: the parameter names are **plural**
+(`categories`, `regions`, `countries`, `model_types`). Singular forms
+(`category=...`) silently fall through to no-filter — easy to miss
+because the response still has `fallback_used: false`. Match the
+notebook function signature in
+`~/workshop/dw_libs/popularity_commons/most_popular_endpoint.py`.
+
+**Bucketing constraint**: `categories` and `regions` cannot be
+combined in one call. The Redis bucket keys are
+`(lang, model_type, category, region, country)` with at most one of
+category / region / country populated. Passing both falls through to
+the categories branch only. Issue two separate calls if you want both.
 
 ### 1.2 `/v2/most-watched`
-- Required: `lang`.
-- Optional: `amount`, `app_name`.
+- Required: `lang`. Optional: `amount`, `app_name`.
 
 ### 1.3 `/v2/trending_tz`
 - Required: `lang`, `timezone` (e.g. `Europe/Berlin`).
@@ -65,22 +95,7 @@ GET /v2/most-viewed?lang=ENGLISH&amount=10
 GET /v2/trending_tz?lang=ENGLISH&timezone=Europe%2FBerlin&amount=20
 ```
 
-### 1.4 `/v2/trending_by_category`
-- One required: `content_id` OR `origin_id`.
-- Optional: `model_type` (default `article`), `amount`.
-- Origin id values: `solid-site/src/data/categories.json` (e.g.
-  `19990022` = Politics, `19990031` = Technology).
-- Returns content across all languages (no `lang` filter).
-
-```
-GET /v2/trending_by_category?origin_id=19990031&amount=10
-```
-
-### 1.5 `/v2/trending_by_region`
-Same shape as 1.4. Origin id format: `region:europe:DE`,
-`region:global`, etc. See `solid-site/src/data/regions.json`.
-
-### 1.6 `/v2/similar`
+### 1.4 `/v2/similar`
 - Required: `ids` (single content_id, despite plural name).
 - Optional: `lang`, `amount`, `model_type`, `categories`, `regions`.
 
@@ -90,11 +105,18 @@ GET /v2/similar?ids=77527661&lang=ENGLISH&amount=8
 
 May return empty `items` for low-data content. Pool builder tolerates.
 
-### 1.7 `/v2/search` (text → similar content)
+### 1.5 `/v2/search` (text → similar content)
 - Required: `text`, `lang`. Optional: `amount`.
 - Use case: future free-text onboarding (chips suffice today).
 
-### 1.8 `/v2/untagger` (Smartocto user-need dimensions)
+### 1.6 Deprecated: `/v2/trending_by_category`, `/v2/trending_by_region`
+
+These exist on the gateway and respond, but they read from a stale
+Redis snapshot (~2022-era content_ids). The prod path replaces them
+both with `/v2/most-viewed` + `categories=` / `regions=` CSV. Do not
+use unless you have a specific reason to want the legacy snapshot.
+
+### 1.7 `/v2/untagger` (Smartocto user-need dimensions)
 - Required: `lang`, `dimension`.
 - Optional: `min_score` (default `0`), `amount` (default `20`).
 
@@ -128,7 +150,7 @@ Response item shape (verified):
 Pool builder reads only `content_id`. **Drop `explanation`** on read to
 keep memory and logs small.
 
-### 1.9 `/v2/untagger_detail` (per-content dimension lookup)
+### 1.8 `/v2/untagger_detail` (per-content dimension lookup)
 - Required: `content_id`.
 - Returns the same per-dimension breakdown for a single content.
 - M2 plan: called fire-and-forget after a like to accumulate the
@@ -138,7 +160,7 @@ keep memory and logs small.
 GET /v2/untagger_detail?content_id=77423104
 ```
 
-### 1.10 Endpoints we do NOT use
+### 1.9 Endpoints we do NOT use
 
 Documented for completeness — these all require a PEACH `user_id` from
 the `_pc_c` cookie, which is unavailable on `*.github.io` (see
