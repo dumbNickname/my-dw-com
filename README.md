@@ -1,42 +1,33 @@
 # my.dw.com (PoC)
 
-A personalised, no-login, reels-style reader for DW content. SPA on GitHub
-Pages. SolidStart in `solid-site/`. No backend, no auth, profile in
-`localStorage`.
+A personalised, no-login, reels-style reader for Deutsche Welle
+content. SolidStart SPA on GitHub Pages. No backend, no auth, profile
+in `localStorage`.
 
-Deployed to: <https://dumbnickname.github.io/my-dw-com/>
+**Live**: <https://dumbnickname.github.io/my-dw-com/>
 
-## Local dev
+## Quick start
 
 ```bash
 pnpm install
 cd solid-site
-pnpm run register-hashes   # one-off: registers GraphQL persisted queries with webapi.dw.com
-pnpm dev
+pnpm run register-hashes   # one-off: registers GraphQL persisted queries
+pnpm dev                   # http://localhost:3000/
+pnpm build                 # outputs .output/public/ (static, GH Pages)
 ```
 
-Open <http://localhost:3000/>.
+## Where to look next
 
-## Build
-
-```bash
-cd solid-site
-pnpm build                # outputs .output/public/ (static)
-pnpm preview              # serves the build locally
-```
-
-## Stack
-
-- SolidStart with `preset: "static"` (app-shell SPA, no SSR).
-- DW PEACH recommendation endpoints (`api.dedw.peach.ebu.io/v2/...`) — `most-viewed`, `trending_tz`, `trending_by_category`, `similar`.
-- DW GraphQL content (`webapi.dw.com/graphql`) with persisted queries pre-registered at build.
-- localStorage profile, no telemetry, no cookies.
-
-## Scope (M0 + M1)
-
-- Onboarding: 12 category chips + 10 region chips + trending carousel.
-- Feed: full-screen single card, "Next" button, no-repeat per device.
-- Cold-start pool: trending-by-category + similar-from-onboarding-taps, fallback trending_tz.
-
-Likes / saves / streak / detail-view / Smartocto untagger ship in later
-iterations (see `handoff/PRD.md`).
+- **[`AGENTS.md`](./AGENTS.md)** — durable orientation for any human or
+  AI agent picking up the codebase: architecture invariants, code map,
+  what's shipped, what's pending, conventions, references.
+- **[`handoff/architecture-risks.md`](./handoff/architecture-risks.md)** —
+  the two outstanding risks (`_pc_c` cookie, `webapi.dw.com` CORS) and
+  how the Cloudflare Worker addresses the second.
+- **[`handoff/api-contract.md`](./handoff/api-contract.md)** — canonical
+  endpoint reference for PEACH + GraphQL.
+- **[`handoff/future-work.md`](./handoff/future-work.md)** — everything
+  deliberately deferred or discovered post-MVP, including the
+  multi-language fan-out and pool-refresh bugs.
+- **[`cloudflare-worker/README.md`](./cloudflare-worker/README.md)** —
+  the 70-line CORS shim Worker.
