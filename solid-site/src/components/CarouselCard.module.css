@@ -4,11 +4,10 @@
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  /* `proximity` rather than `mandatory` so a click-driven restyle of a
-   * carousel item (e.g. data-selected toggle) doesn't cause the browser
-   * to re-snap and jump scroll back to the first item. Proximity only
-   * snaps when the scroll comes to rest near a snap point. */
-  scroll-snap-type: x proximity;
+  /* No scroll-snap. Snap-align on a <button> snap-target competes with
+   * the browser's "keep focused element in view" behaviour after a tap,
+   * causing the carousel to jump to the first item whenever any card is
+   * clicked. Plain horizontal scroll is fine for this use case. */
   -webkit-overflow-scrolling: touch;
   padding: 4px 2px 12px;
   margin: 0 -4px;
@@ -23,7 +22,6 @@
 
 .carousel-item {
   flex: 0 0 220px;
-  scroll-snap-align: start;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 2px solid transparent;

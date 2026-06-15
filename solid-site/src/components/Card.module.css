@@ -8,18 +8,6 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  animation: cardEnter var(--dur-slow) var(--ease-out);
-}
-
-@keyframes cardEnter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .feed-card-img {
