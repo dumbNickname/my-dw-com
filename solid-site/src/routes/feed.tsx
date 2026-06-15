@@ -6,17 +6,18 @@
  * gracefully when the pool runs dry.
  *
  * Action bar (M2 first slice): like + save persist to profile; expand
- * lazy-fetches the body. Saved-list bottom-sheet renders here. Bandit
- * pool / dimension_pref / streak / untagger remain pending.
+ * lazy-fetches the body. The library sheet (saved + liked tabs) is
+ * owned by `Shell` and opened via the LibraryContext — feed only
+ * triggers it.
  */
 import { Title } from "@solidjs/meta";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
 
 import { Card } from "~/components/Card";
-import { SavedSheet } from "~/components/SavedSheet";
 import { CardSkeleton } from "~/components/Skeleton";
 import { fetchCard, type CardContent } from "~/lib/graphql";
+import { useLibrary } from "~/lib/libraryContext";
 import * as pool from "~/lib/pool";
 import {
   isLiked,
@@ -27,6 +28,7 @@ import {
   save,
   toggleLike,
   toggleSave,
+  type LibraryItem,
   type Profile,
 } from "~/lib/profile";
 
@@ -36,15 +38,24 @@ type FeedState =
   | { kind: "empty" }
   | { kind: "error"; message: string };
 
+const snapshot = (c: CardContent, fallbackLang: string): Omit<LibraryItem, "ts"> => ({
+  id: String(c.id),
+  lang: c.language || fallbackLang,
+  title: c.title || "(untitled)",
+  kicker: c.roadTeaserKicker,
+  image: c.mainContentImage?.staticUrl || null,
+  namedUrl: c.namedUrl,
+});
+
 export default function Feed() {
   const navigate = useNavigate();
+  const library = useLibrary();
 
   const [state, setState] = createSignal<FeedState>({ kind: "loading" });
 
   // Profile is reactive so the action bar reflects toggle state immediately
   // without us threading it through the FeedState union.
   const [profile, setProfile] = createSignal<Profile>(load());
-  const [sheetOpen, setSheetOpen] = createSignal(false);
 
   // Pool lives as a plain ref because we mutate it imperatively around
   // the per-tap fetch dance.
@@ -129,27 +140,13 @@ export default function Feed() {
   }
 
   const onToggleLike = (c: CardContent) => {
-    updateProfile(toggleLike(profile(), String(c.id)));
+    const fallbackLang = profile().langs[0] || "ENGLISH";
+    updateProfile(toggleLike(profile(), String(c.id), snapshot(c, fallbackLang)));
   };
 
   const onToggleSave = (c: CardContent) => {
-    updateProfile(
-      toggleSave(profile(), String(c.id), {
-        id: String(c.id),
-        lang: c.language || profile().langs[0] || "ENGLISH",
-        title: c.title || "(untitled)",
-        kicker: c.roadTeaserKicker,
-        image: c.mainContentImage?.staticUrl || null,
-        namedUrl: c.namedUrl,
-      }),
-    );
-  };
-
-  const removeSaved = (id: string) => {
-    updateProfile(toggleSave(profile(), id, {
-      // Snapshot is ignored on removal (toggleSave checks existence first).
-      id, lang: "ENGLISH", title: "", kicker: null, image: null, namedUrl: null,
-    }));
+    const fallbackLang = profile().langs[0] || "ENGLISH";
+    updateProfile(toggleSave(profile(), String(c.id), snapshot(c, fallbackLang)));
   };
 
   onMount(() => {
@@ -175,7 +172,7 @@ export default function Feed() {
               savedCount={profile().saved.length}
               onToggleLike={() => onToggleLike(s.current)}
               onToggleSave={() => onToggleSave(s.current)}
-              onOpenSaved={() => setSheetOpen(true)}
+              onOpenSaved={() => library.open()}
             />
           );
         })()}
@@ -217,13 +214,6 @@ export default function Feed() {
           );
         })()}
       </Show>
-
-      <SavedSheet
-        open={sheetOpen()}
-        items={profile().saved}
-        onClose={() => setSheetOpen(false)}
-        onRemove={removeSaved}
-      />
     </div>
   );
 }

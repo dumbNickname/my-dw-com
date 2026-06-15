@@ -1,7 +1,18 @@
 import { MetaProvider } from "@solidjs/meta";
 import { Router, useLocation } from "@solidjs/router";
 import { FileRoutes } from "@solidjs/start/router";
-import { Show, Suspense, type JSX } from "solid-js";
+import { Show, Suspense, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js";
+
+import { LibrarySheet } from "./components/LibrarySheet";
+import { LibraryContext } from "./lib/libraryContext";
+import {
+  libraryCount,
+  load,
+  save,
+  toggleLike,
+  toggleSave,
+  type Profile,
+} from "./lib/profile";
 
 import styles from "./app.module.css";
 import "./styles/global.css";
@@ -12,24 +23,87 @@ const BASE_PATH = (import.meta.env.BASE_PATH || "").replace(/\/$/, "");
  * Inner shell — receives the active location so we can drop the top
  * chrome on screens where the reels card needs all the vertical space
  * (currently /feed). Brand wordmark stays on onboarding.
+ *
+ * Also owns the LibrarySheet: any consumer (the feed card's action bar,
+ * the app footer below) opens it via the LibraryContext. Profile state
+ * shown in the footer (count badge) is kept in sync via the
+ * `mydw:profile-change` window event that `lib/profile.save` dispatches.
  */
 function Shell(props: { children: JSX.Element }) {
   const location = useLocation();
   const isFeed = () => location.pathname.replace(/\/$/, "").endsWith("/feed");
 
+  const [bump, setBump] = createSignal(0);
+  const profile = createMemo<Profile>(() => {
+    bump(); // tracked
+    return load();
+  });
+  const count = createMemo(() => libraryCount(profile()));
+
+  onMount(() => {
+    const onChange = () => setBump((b) => b + 1);
+    window.addEventListener("mydw:profile-change", onChange);
+    onCleanup(() => window.removeEventListener("mydw:profile-change", onChange));
+  });
+
+  const [sheetOpen, setSheetOpen] = createSignal(false);
+
+  const removeSaved = (id: string) => {
+    save(
+      toggleSave(profile(), id, {
+        id, lang: "ENGLISH", title: "", kicker: null, image: null, namedUrl: null,
+      }),
+    );
+  };
+  const removeLiked = (id: string) => {
+    save(
+      toggleLike(profile(), id, {
+        id, lang: "ENGLISH", title: "", kicker: null, image: null, namedUrl: null,
+      }),
+    );
+  };
+
   return (
-    <div class={styles["app-shell"]} data-route={isFeed() ? "feed" : "default"}>
-      <Show when={!isFeed()}>
-        <header class={styles["app-header"]}>
-          <a href={BASE_PATH + "/"} class={styles.brand} aria-label="my.dw.com home">
-            my<span class={styles["brand-dot"]}>.</span>dw<span class={styles["brand-dot"]}>.</span>com
-          </a>
-        </header>
-      </Show>
-      <main class={styles["app-main"]}>
-        <Suspense>{props.children}</Suspense>
-      </main>
-    </div>
+    <LibraryContext.Provider value={{ open: () => setSheetOpen(true) }}>
+      <div class={styles["app-shell"]} data-route={isFeed() ? "feed" : "default"}>
+        <Show when={!isFeed()}>
+          <header class={styles["app-header"]}>
+            <a href={BASE_PATH + "/"} class={styles.brand} aria-label="my.dw.com home">
+              my<span class={styles["brand-dot"]}>.</span>dw<span class={styles["brand-dot"]}>.</span>com
+            </a>
+          </header>
+        </Show>
+        <main class={styles["app-main"]}>
+          <Suspense>{props.children}</Suspense>
+        </main>
+        <footer class={styles["app-footer"]} aria-label="App actions">
+          <button
+            type="button"
+            class={styles["app-footer-btn"]}
+            data-has-items={count() > 0}
+            onClick={() => setSheetOpen(true)}
+            aria-label={`Open library (${count()} items)`}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 5a2 2 0 0 1 2-2h10v18H6a2 2 0 0 1-2-2zM16 3h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2" />
+            </svg>
+            <span>Library</span>
+            <Show when={count() > 0}>
+              <span class={styles["app-footer-badge"]}>{count()}</span>
+            </Show>
+          </button>
+        </footer>
+      </div>
+
+      <LibrarySheet
+        open={sheetOpen()}
+        saved={profile().saved}
+        liked={profile().liked}
+        onClose={() => setSheetOpen(false)}
+        onRemoveSaved={removeSaved}
+        onRemoveLiked={removeLiked}
+      />
+    </LibraryContext.Provider>
   );
 }
 

@@ -4,19 +4,23 @@
  * M0/M1 scope: stores only what's needed to render the cold-start pool
  * and dedup seen ids.
  *
- * M2 first slice (this iteration): likes + saves stored locally. Likes
- * are a pure count + per-id set so we can later derive a `dimension_pref`
- * map from them; for now they only feed the bottom-bar UI. Saves are an
- * ordered list (newest first) of {id, lang, title, kicker, image,
- * namedUrl} snapshots so the saved-list bottom-sheet can render without
- * a re-fetch even when offline.
+ * M2 first slice: likes + saves with offline snapshots. Both lists
+ * mirror each other (`SavedItem` / `LikedItem` shapes), so the library
+ * sheet can render them with the same row component. Toggle helpers
+ * keep the snapshot list in sync with the id-set so we never end up
+ * with orphan snapshots or orphan ids.
+ *
+ * `liked_ids` is kept around for backward compatibility with the
+ * previous schema (and as a fast-path membership check in the action
+ * bar); on every save/like toggle we rebuild it from the snapshot
+ * arrays, so it stays consistent.
  */
 
 const KEY = "mydw_profile_v1";
 const SEEN_CAP = 500;
-const SAVED_CAP = 200;
+const LIBRARY_CAP = 200;
 
-export type SavedItem = {
+export type LibraryItem = {
   id: string;
   lang: string;
   title: string;
@@ -26,6 +30,9 @@ export type SavedItem = {
   ts: number;
 };
 
+export type SavedItem = LibraryItem;
+export type LikedItem = LibraryItem;
+
 export type Profile = {
   version: 1;
   langs: string[];
@@ -33,8 +40,9 @@ export type Profile = {
   regions: string[]; // selected origin ids
   seed_ids: string[]; // article ids tapped during onboarding
   seen_ids: string[]; // FIFO cap SEEN_CAP
-  liked_ids: string[]; // article ids the user liked (set semantics, FIFO cap)
-  saved: SavedItem[]; // newest-first, cap SAVED_CAP
+  liked_ids: string[]; // mirrors `liked` for fast membership checks
+  liked: LikedItem[]; // newest-first, cap LIBRARY_CAP
+  saved: SavedItem[]; // newest-first, cap LIBRARY_CAP
 };
 
 const empty = (): Profile => ({
@@ -45,6 +53,7 @@ const empty = (): Profile => ({
   seed_ids: [],
   seen_ids: [],
   liked_ids: [],
+  liked: [],
   saved: [],
 });
 
@@ -67,6 +76,10 @@ export function save(p: Profile): void {
   if (!isBrowser()) return;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(p));
+    // Notify any in-page subscriber (the app footer's library badge,
+    // currently). Cross-page sync via the native `storage` event would
+    // also work but doesn't fire on the same page that made the write.
+    window.dispatchEvent(new CustomEvent("mydw:profile-change"));
   } catch {
     // localStorage may be full or blocked; ignore
   }
@@ -92,14 +105,29 @@ export function isOnboarded(p: Profile): boolean {
   return p.categories.length > 0 || p.regions.length > 0 || p.seed_ids.length > 0;
 }
 
-/** Toggle a like on `id`. Idempotent; returns the new profile. */
-export function toggleLike(p: Profile, id: string): Profile {
-  const set = new Set(p.liked_ids);
-  if (set.has(id)) set.delete(id);
-  else set.add(id);
-  // Cap at SEEN_CAP too — likes are unlikely to ever hit it.
-  const liked_ids = Array.from(set).slice(-SEEN_CAP);
-  return { ...p, liked_ids };
+/**
+ * Toggle membership of `id` in a snapshot list. If the id is present,
+ * remove it. Otherwise prepend `snapshot` (with `ts` filled in) and
+ * trim to LIBRARY_CAP. Pure; returns the new list.
+ */
+function toggleInList(
+  list: LibraryItem[],
+  id: string,
+  snapshot: Omit<LibraryItem, "ts">,
+): LibraryItem[] {
+  const idx = list.findIndex((s) => s.id === id);
+  if (idx >= 0) {
+    const next = [...list];
+    next.splice(idx, 1);
+    return next;
+  }
+  return [{ ...snapshot, ts: Date.now() }, ...list].slice(0, LIBRARY_CAP);
+}
+
+/** Toggle a like. Idempotent. `snapshot` only used when adding. */
+export function toggleLike(p: Profile, id: string, snapshot: Omit<LibraryItem, "ts">): Profile {
+  const liked = toggleInList(p.liked, id, snapshot);
+  return { ...p, liked, liked_ids: liked.map((i) => i.id) };
 }
 
 export function isLiked(p: Profile, id: string): boolean {
@@ -107,18 +135,19 @@ export function isLiked(p: Profile, id: string): boolean {
 }
 
 /** Toggle a save. Idempotent. `snapshot` only used when adding. */
-export function toggleSave(p: Profile, id: string, snapshot: Omit<SavedItem, "ts">): Profile {
-  const idx = p.saved.findIndex((s) => s.id === id);
-  if (idx >= 0) {
-    const saved = [...p.saved];
-    saved.splice(idx, 1);
-    return { ...p, saved };
-  }
-  const item: SavedItem = { ...snapshot, ts: Date.now() };
-  const saved = [item, ...p.saved].slice(0, SAVED_CAP);
+export function toggleSave(p: Profile, id: string, snapshot: Omit<LibraryItem, "ts">): Profile {
+  const saved = toggleInList(p.saved, id, snapshot);
   return { ...p, saved };
 }
 
 export function isSaved(p: Profile, id: string): boolean {
   return p.saved.some((s) => s.id === id);
+}
+
+/** Total items in the user's library (saved + liked, deduped by id). */
+export function libraryCount(p: Profile): number {
+  const ids = new Set<string>();
+  for (const i of p.saved) ids.add(i.id);
+  for (const i of p.liked) ids.add(i.id);
+  return ids.size;
 }

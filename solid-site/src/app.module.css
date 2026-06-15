@@ -41,3 +41,56 @@
 .app-shell[data-route="feed"] .app-main {
   padding-top: 16px;
 }
+
+/* App footer — viewport-fixed thin rail, always visible. Hosts a
+ * single Library button so saved + liked are discoverable from any
+ * screen. Distinct from the card's per-card action bar. */
+
+.app-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in oklab, var(--c-surface) 92%, transparent);
+  border-top: 1px solid var(--c-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.app-footer-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--c-text-soft);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.app-footer-btn:hover {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+}
+.app-footer-btn[data-has-items="true"] {
+  color: var(--c-text);
+}
+
+.app-footer-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--c-primary);
+  color: var(--c-primary-ink);
+  min-width: 18px;
+  text-align: center;
+}
