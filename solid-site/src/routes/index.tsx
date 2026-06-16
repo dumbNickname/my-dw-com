@@ -130,6 +130,7 @@ function withAutodetectedLang(p: Profile): Profile {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  let carouselRef: HTMLDivElement | undefined;
 
   const [profile, setProfile] = createSignal<Profile>(withAutodetectedLang(load()));
   const [trending, setTrending] = createSignal<CardContent[]>([]);
@@ -209,12 +210,16 @@ export default function Onboarding() {
   };
 
   const toggleSeed = (id: string) => {
+    const scrollLeft = carouselRef?.scrollLeft ?? 0;
     setProfile((p) => ({
       ...p,
       seed_ids: p.seed_ids.includes(id)
         ? p.seed_ids.filter((x) => x !== id)
         : [...p.seed_ids, id],
     }));
+    requestAnimationFrame(() => {
+      if (carouselRef) carouselRef.scrollLeft = scrollLeft;
+    });
   };
 
   const canStart = () =>
@@ -353,7 +358,7 @@ export default function Onboarding() {
               </div>
             }
           >
-            <div class={carouselStyles.carousel}>
+            <div class={carouselStyles.carousel} ref={carouselRef}>
               <For each={trending()}>
                 {(c) => (
                   <CarouselCard

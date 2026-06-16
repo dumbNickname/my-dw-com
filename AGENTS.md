@@ -289,28 +289,52 @@ solid-site/
   6 so we top up well before the queue can drain. 60s in-memory cache
   in `lib/peach.ts` collapses identical calls across back-to-back
   refills so quota stays under control.
+- **Onboarding carousel scroll fix**: dropped `scroll-snap-type` /
+  `scroll-snap-align` from `CarouselCard.module.css` AND added an
+  `onPointerDown` handler in `CarouselCard.tsx` that calls
+  `focus({ preventScroll: true })` before `preventDefault()`. Two
+  separate browser behaviours were teaming up to make the carousel
+  jump back to the first item on every tap: scroll-snap re-evaluating
+  on style change, and the browser's "ensure focused element is in
+  view" scroll. Both are now suppressed.
+- **Card mount animation removed**: dropped `cardEnter` keyframes from
+  `Card.module.css`. The 420ms fade+slide ran on every Next-tap
+  swap, producing a visible flash even on fast networks. Next-tap
+  polish (image pre-load + skeleton-on-slow) is parked — see §7.
 
 ## 7. What's pending
 
-In rough priority order. Most are M2/M3 from the original plan:
+In rough priority order.
 
-1. **Bandit pool with source weighting** — currently `lib/pool.ts` does
+1. **Next-tap UX polish (in flight, paused)** — agreed plan: when
+   `nextValidContent()` resolves a `CardContent`, fire a
+   `new Image().src = resolveImage(staticUrl, "60X", 720)` to seed the
+   browser's image cache while the user is still reading the current
+   card. Then on Next, `s.next` already has both data AND a decoded
+   image, so the swap is instant. If the next isn't ready yet (slow
+   network), show `<CardSkeleton/>` with a `~150ms` min-delay so a
+   fast-network swap doesn't briefly flash skeleton for nothing.
+   `Card.tsx`'s hero img params are `("60X", 720)` — keep aligned with
+   `lib/image.ts`. The `cardEnter` animation is already gone, so this
+   slot just needs the pre-load + the skeleton-on-slow fallback wired
+   into `feed.tsx:handleNext`.
+2. **Bandit pool with source weighting** — currently `lib/pool.ts` does
    parallel-fetch + shuffle. PRD M2 calls for explicit per-source weights
    that update based on user signals.
-2. **`dimension_pref` accumulation via `/v2/untagger_detail`** — on every
+3. **`dimension_pref` accumulation via `/v2/untagger_detail`** — on every
    like, fire-and-forget that endpoint, accumulate score per dimension
    into the profile. Then use it as a sampling weight for an "untagger
    slot" in the pool.
-3. **Discovery slot every 7th tap** — pull from `most-viewed` or a
+4. **Discovery slot every 7th tap** — pull from `most-viewed` or a
    randomised category, badge "Discover".
-4. **Streak counter** — +1 per calendar day after ≥3 cards viewed. Tiny
+5. **Streak counter** — +1 per calendar day after ≥3 cards viewed. Tiny
    flame badge somewhere.
-5. **`/article/:contentId` detail view** with DOMPurify body sanitiser
+6. **`/article/:contentId` detail view** with DOMPurify body sanitiser
    (see §4.7).
-6. **`/saved` proper route** to replace the LibrarySheet stand-in.
-7. **Theme toggle UI** (palette already supports dark; flicker-prevention
+7. **`/saved` proper route** to replace the LibrarySheet stand-in.
+8. **Theme toggle UI** (palette already supports dark; flicker-prevention
    script in `entry-server.tsx` reads `localStorage.mydw_theme`).
-8. **README screenshots** + reset-profile button in a settings panel.
+9. **README screenshots** + reset-profile button in a settings panel.
 
 Deeper-future items live in `handoff/future-work.md`.
 

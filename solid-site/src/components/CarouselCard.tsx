@@ -1,6 +1,12 @@
 /**
  * Onboarding carousel item — small selectable card sourced from
  * most-viewed. Tapping toggles selection and seeds `similar` later.
+ *
+ * `onPointerDown` calls `focus({ preventScroll: true })` and then
+ * `preventDefault()` on the event. This is the browser's standard
+ * defence against the "tap a button, browser scrolls it into view"
+ * behaviour that was making the horizontally-scrolling carousel jump
+ * back to the start on every selection. Click still fires normally.
  */
 import { Show } from "solid-js";
 
@@ -25,6 +31,10 @@ export function CarouselCard(props: {
       class={styles["carousel-item"]}
       data-selected={props.selected}
       aria-pressed={props.selected}
+      onPointerDown={(e) => {
+        e.currentTarget.focus({ preventScroll: true });
+        e.preventDefault();
+      }}
       onClick={() => props.onToggle()}
     >
       <Show
