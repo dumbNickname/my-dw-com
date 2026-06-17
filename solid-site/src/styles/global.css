@@ -158,6 +158,7 @@ input:focus-visible {
 .shell {
   width: 100%;
   max-width: var(--shell-max);
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 20px;

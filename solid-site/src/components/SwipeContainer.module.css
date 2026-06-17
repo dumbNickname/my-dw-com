@@ -1,6 +1,7 @@
 .wrapper {
   position: relative;
   width: 100%;
+  flex: 1;
   touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
