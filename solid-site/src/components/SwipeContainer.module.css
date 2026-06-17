@@ -78,7 +78,7 @@
 
 .handle-left {
   left: 4px;
-  background: var(--c-advance);
+  background: var(--c-advance-handle);
 }
 
 .handle-right {
@@ -122,7 +122,7 @@
 .side-btn-advance:hover {
   background: var(--c-advance-bg);
   color: var(--c-advance);
-  border-color: var(--c-advance);
+  border-color: var(--c-advance-handle);
 }
 
 .side-btn-interesting {

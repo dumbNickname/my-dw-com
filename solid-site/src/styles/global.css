@@ -53,9 +53,10 @@
   --c-interesting: #2e9e6e;
   --c-interesting-bg: rgba(46, 158, 110, 0.10);
   --c-interesting-hover: rgba(46, 158, 110, 0.18);
-  --c-advance: #6b7f96;
-  --c-advance-bg: rgba(107, 127, 150, 0.08);
-  --c-advance-hover: rgba(107, 127, 150, 0.16);
+  --c-advance: #F0F6FA;
+  --c-advance-bg: rgba(8, 19, 54, 0.55);
+  --c-advance-hover: rgba(8, 19, 54, 0.65);
+  --c-advance-handle: #445D7B;
 
   /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -89,6 +90,7 @@
   --c-advance: #8fa5bb;
   --c-advance-bg: rgba(143, 165, 187, 0.08);
   --c-advance-hover: rgba(143, 165, 187, 0.16);
+  --c-advance-handle: #8fa5bb;
 }
 
 /* ───── Resets ───── */
