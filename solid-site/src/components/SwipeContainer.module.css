@@ -25,20 +25,21 @@
 .overlay-advance {
   left: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, var(--c-advance-bg) 0%, transparent 100%);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--c-advance) 25%, transparent) 0%, transparent 100%);
 }
 
 .overlay-interesting {
   right: 0;
   transform: translateX(100%);
-  background: linear-gradient(270deg, var(--c-interesting-bg) 0%, transparent 100%);
+  background: linear-gradient(270deg, color-mix(in oklab, var(--c-interesting) 25%, transparent) 0%, transparent 100%);
 }
 
 .overlay-inner {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  padding: 12px 8px;
   writing-mode: vertical-rl;
   text-orientation: mixed;
   font-size: 12px;
@@ -58,11 +59,11 @@
 /* ───── Edge handles (mobile discoverability) ───── */
 
 .handle {
-  position: absolute;
+  position: fixed;
   top: 50%;
   transform: translateY(-50%);
   width: 6px;
-  height: 48px;
+  height: 56px;
   border-radius: 3px;
   z-index: 15;
   opacity: 0.35;
@@ -75,12 +76,12 @@
 }
 
 .handle-left {
-  left: 2px;
+  left: 4px;
   background: var(--c-advance);
 }
 
 .handle-right {
-  right: 2px;
+  right: 4px;
   background: var(--c-interesting);
 }
 
@@ -91,12 +92,12 @@
   top: 50%;
   transform: translateY(-50%);
   display: none;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 44px;
-  padding: 18px 0;
+  gap: 6px;
+  width: 48px;
+  padding: 24px 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--c-border);
   background: var(--c-surface);
