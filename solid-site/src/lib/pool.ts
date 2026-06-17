@@ -45,10 +45,12 @@ const LANG_FANOUT = 3;
 const SEED_RECENT_AMOUNT = 3;
 const SEED_LIKED_AMOUNT = 3;
 const SEED_ONBOARDING_AMOUNT = 3;
+const INTERESTING_BUCKET_SIZE = 5;
 
 export type PoolState = {
   queue: Candidate[];
   refilling: boolean;
+  interestingBucket: number;
 };
 
 export type RefillOpts = {
@@ -61,7 +63,7 @@ export type RefillOpts = {
 };
 
 export function createPool(): PoolState {
-  return { queue: [], refilling: false };
+  return { queue: [], refilling: false, interestingBucket: 0 };
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -86,7 +88,8 @@ function langList(profile: Profile): string[] {
 async function fetchCandidates(
   profile: Profile,
   opts: RefillOpts,
-): Promise<Candidate[]> {
+  interestingBucket: number,
+): Promise<{ candidates: Candidate[]; nextBucket: number }> {
   const langs = langList(profile);
   const primaryLang = langs[0];
   const tz = peach.browserTimezone();
@@ -141,12 +144,30 @@ async function fetchCandidates(
     }
   }
 
+  let nextBucket = interestingBucket;
+  if (profile.interesting.length > 0) {
+    const start = interestingBucket * INTERESTING_BUCKET_SIZE;
+    const bucket = profile.interesting.slice(start, start + INTERESTING_BUCKET_SIZE);
+    if (bucket.length > 0) {
+      for (const item of bucket) {
+        requests.push(peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT));
+      }
+      nextBucket = interestingBucket + 1;
+    } else {
+      nextBucket = 0;
+      const fallback = profile.interesting.slice(0, INTERESTING_BUCKET_SIZE);
+      for (const item of fallback) {
+        requests.push(peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT));
+      }
+    }
+  }
+
   const settled = await Promise.allSettled(requests);
   const all: Candidate[] = [];
   for (const r of settled) {
     if (r.status === "fulfilled") all.push(...r.value);
   }
-  return all;
+  return { candidates: all, nextBucket };
 }
 
 /**
@@ -166,7 +187,7 @@ export async function refill(
   const inQueue = new Set(state.queue.map((c) => c.id));
   const allowedLangs = new Set(langList(profile));
 
-  const incoming = await fetchCandidates(profile, opts);
+  const { candidates: incoming, nextBucket } = await fetchCandidates(profile, opts, state.interestingBucket);
 
   const fresh: Candidate[] = [];
   const freshIds = new Set<string>();
@@ -183,6 +204,7 @@ export async function refill(
   return {
     queue: [...state.queue, ...fresh],
     refilling: false,
+    interestingBucket: nextBucket,
   };
 }
 

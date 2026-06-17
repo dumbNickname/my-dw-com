@@ -3,19 +3,17 @@
  *
  * Shows: image, kicker, title, summary, language badge, relative date.
  *
- * Bottom action bar (M2 first slice):
+ * Bottom action bar:
  *   ♥ Like        toggles, persists to profile.liked_ids
- *   🔖 Save (n)   toggles, persists to profile.saved (snapshot stored)
- *                 the count opens the saved bottom-sheet
+ *   🔖 Save       toggles, persists to profile.saved (snapshot stored)
  *   ⤢ Expand      lazy-fetches body via MyDwBody, renders as plain
  *                 paragraphs (no DOMPurify until M3)
  *   Open ↗        external link to dw.com
- *   Next →        primary action, advances the feed
  *
- * Body HTML is fetched on demand and memoised by (id, lang) in the
- * GraphQL session cache, so re-expanding the same card is instant. We
- * also keep the result on a parent-owned signal so navigating back to
- * the same card during a session doesn't re-fetch.
+ * Navigation (Next / Interesting) is handled by the parent
+ * SwipeContainer via gestures (mobile) or side buttons (desktop).
+ *
+ * "Next similar" button renders at the end of the expanded body text.
  */
 import { Show, createSignal, For } from "solid-js";
 
@@ -54,14 +52,11 @@ const summaryText = (c: CardContent): string => c.shortTeaser || c.teaser || "";
 
 export type CardProps = {
   content: CardContent;
-  onNext: () => void;
-  hasNext: boolean;
-  /** Whether this card is currently in the user's liked set. */
   liked: boolean;
-  /** Whether this card is currently in the user's saved list. */
   saved: boolean;
   onToggleLike: () => void;
   onToggleSave: () => void;
+  onNextSimilar?: () => void;
 };
 
 export function Card(props: CardProps) {
@@ -144,6 +139,21 @@ export function Card(props: CardProps) {
             </Show>
             <Show when={!bodyLoading() && bodyParas() && bodyParas()!.length > 0}>
               <For each={bodyParas()!}>{(p) => <p>{p}</p>}</For>
+              <Show when={props.onNextSimilar}>
+                <button
+                  type="button"
+                  class={styles["next-similar-btn"]}
+                  onClick={() => props.onNextSimilar?.()}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 2l1.5 4.5H14l-3.5 2.8L12 14 8 11l-4 3 1.5-4.7L2 6.5h4.5z" />
+                  </svg>
+                  Next similar
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 3l5 5-5 5" />
+                  </svg>
+                </button>
+              </Show>
             </Show>
           </div>
         </Show>
@@ -206,19 +216,6 @@ export function Card(props: CardProps) {
           </svg>
           <span class={styles["action-label"]}>dw.com</span>
         </a>
-
-        <button
-          type="button"
-          class={`${styles["action-btn"]} ${styles["action-btn-primary"]}`}
-          onClick={() => props.onNext()}
-          disabled={!props.hasNext}
-          aria-label="Next article"
-        >
-          <span class={styles["action-label"]}>Next</span>
-          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 3l5 5-5 5" />
-          </svg>
-        </button>
       </nav>
     </article>
   );

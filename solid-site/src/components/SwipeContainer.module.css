@@ -1,0 +1,145 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ───── Overlay hints (mobile) ───── */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+  transition: transform var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+
+.overlay-advance {
+  left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, var(--c-advance-bg) 0%, transparent 100%);
+}
+
+.overlay-interesting {
+  right: 0;
+  transform: translateX(100%);
+  background: linear-gradient(270deg, var(--c-interesting-bg) 0%, transparent 100%);
+}
+
+.overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.overlay-advance .overlay-inner {
+  color: var(--c-advance);
+}
+
+.overlay-interesting .overlay-inner {
+  color: var(--c-interesting);
+}
+
+/* ───── Edge handles (mobile discoverability) ───── */
+
+.handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 48px;
+  border-radius: 3px;
+  z-index: 15;
+  opacity: 0.35;
+  transition: opacity var(--dur-base) var(--ease-out);
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+.handle:hover {
+  opacity: 0.55;
+}
+
+.handle-left {
+  left: 2px;
+  background: var(--c-advance);
+}
+
+.handle-right {
+  right: 2px;
+  background: var(--c-interesting);
+}
+
+/* ───── Desktop side buttons ───── */
+
+.side-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 44px;
+  padding: 18px 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-mute);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  cursor: pointer;
+  transition: background var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+  z-index: 15;
+}
+
+.side-btn-advance {
+  right: calc(100% + 12px);
+}
+.side-btn-advance:hover {
+  background: var(--c-advance-bg);
+  color: var(--c-advance);
+  border-color: var(--c-advance);
+}
+
+.side-btn-interesting {
+  left: calc(100% + 12px);
+}
+.side-btn-interesting:hover {
+  background: var(--c-interesting-bg);
+  color: var(--c-interesting);
+  border-color: var(--c-interesting);
+}
+
+@media (min-width: 900px) {
+  .side-btn {
+    display: flex;
+  }
+  .handle {
+    display: none;
+  }
+  .wrapper {
+    touch-action: auto;
+  }
+}

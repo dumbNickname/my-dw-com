@@ -28,10 +28,13 @@ import { createSignal, onMount, Show } from "solid-js";
 
 import { Card } from "~/components/Card";
 import { CardSkeleton } from "~/components/Skeleton";
+import { SwipeContainer, type SwipeDirection } from "~/components/SwipeContainer";
 import { fetchCard, type CardContent } from "~/lib/graphql";
 import { resolveImage } from "~/lib/image";
+import * as peach from "~/lib/peach";
 import * as pool from "~/lib/pool";
 import {
+  addInteresting,
   isLiked,
   isOnboarded,
   isSaved,
@@ -167,7 +170,6 @@ export default function Feed() {
     if (s.kind !== "ready") return;
     tapCount += 1;
     if (!s.next) {
-      // No pre-fetched next; fall back to a synchronous fetch.
       setState({ kind: "loading" });
       const fresh = await nextValidContent();
       if (!fresh) {
@@ -178,13 +180,40 @@ export default function Feed() {
       setState({ kind: "ready", current: fresh, next: after });
       return;
     }
-    // Promote next → current and pre-fetch the new next.
     const promoted = s.next;
     setState({ kind: "ready", current: promoted, next: null });
     const after = await nextValidContent();
     setState((current) =>
       current.kind === "ready" ? { ...current, next: after } : current,
     );
+  }
+
+  function handleSwipe(dir: SwipeDirection) {
+    const s = state();
+    if (s.kind !== "ready") return;
+    if (dir === "interesting") {
+      const c = s.current;
+      updateProfile(addInteresting(profile(), String(c.id), c.language || profile().langs[0] || "ENGLISH"));
+    }
+    void handleNext();
+  }
+
+  async function handleNextSimilar() {
+    const s = state();
+    if (s.kind !== "ready") return;
+    const c = s.current;
+    const lang = c.language || profile().langs[0] || "ENGLISH";
+
+    updateProfile(addInteresting(profile(), String(c.id), lang));
+
+    const candidates = await peach.similar(String(c.id), lang, 8);
+    const seen = new Set(profile().seen_ids);
+    const unseen = candidates.filter((x) => !seen.has(x.id)).slice(0, 3);
+
+    if (unseen.length > 0) {
+      poolState = { ...poolState, queue: [...unseen, ...poolState.queue] };
+    }
+    void handleNext();
   }
 
   const onToggleLike = (c: CardContent) => {
@@ -211,15 +240,16 @@ export default function Feed() {
         {(() => {
           const s = state() as Extract<FeedState, { kind: "ready" }>;
           return (
-            <Card
-              content={s.current}
-              onNext={handleNext}
-              hasNext={true}
-              liked={isLiked(profile(), String(s.current.id))}
-              saved={isSaved(profile(), String(s.current.id))}
-              onToggleLike={() => onToggleLike(s.current)}
-              onToggleSave={() => onToggleSave(s.current)}
-            />
+            <SwipeContainer onSwipe={handleSwipe}>
+              <Card
+                content={s.current}
+                liked={isLiked(profile(), String(s.current.id))}
+                saved={isSaved(profile(), String(s.current.id))}
+                onToggleLike={() => onToggleLike(s.current)}
+                onToggleSave={() => onToggleSave(s.current)}
+                onNextSimilar={handleNextSimilar}
+              />
+            </SwipeContainer>
           );
         })()}
       </Show>

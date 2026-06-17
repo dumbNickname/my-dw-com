@@ -19,6 +19,13 @@ import "./styles/global.css";
 
 const BASE_PATH = (import.meta.env.BASE_PATH || "").replace(/\/$/, "");
 
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try { localStorage.setItem("mydw_theme", next); } catch {}
+}
+
 /**
  * Inner shell — receives the active location so we can drop the top
  * chrome on screens where the reels card needs all the vertical space
@@ -77,6 +84,17 @@ function Shell(props: { children: JSX.Element }) {
           <Suspense>{props.children}</Suspense>
         </main>
         <footer class={styles["app-footer"]} aria-label="App actions">
+          <button
+            type="button"
+            class={styles["app-footer-btn"]}
+            onClick={toggleTheme}
+            aria-label="Toggle light/dark theme"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+              <path d="M12 3a9 9 0 1 0 0 18 5 5 0 0 1 0-10 3 3 0 0 0 0-6V3z" />
+            </svg>
+            <span>Theme</span>
+          </button>
           <button
             type="button"
             class={styles["app-footer-btn"]}

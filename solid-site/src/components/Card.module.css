@@ -150,32 +150,35 @@
   text-decoration: none;
 }
 
-.action-btn-primary {
-  flex: 1.4 1 0;
-  flex-direction: row;
-  gap: 6px;
-  background: var(--c-primary);
-  color: var(--c-primary-ink);
-  font-size: 14px;
-  min-height: 48px;
-  margin-left: 4px;
-  border-radius: var(--radius-pill);
-}
-.action-btn-primary:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--c-primary) 90%, black);
-  color: var(--c-primary-ink);
-}
-.action-btn-primary[data-active="true"] {
-  color: var(--c-primary-ink);
-}
-.action-btn-primary .action-label {
-  font-size: 14px;
-  font-weight: 700;
-}
-
 /* On very narrow screens hide secondary labels so the bar still fits. */
 @media (max-width: 380px) {
   .action-btn:not(.action-btn-primary) .action-label {
     display: none;
   }
+}
+
+/* "Next similar" button at bottom of expanded article body. */
+
+.next-similar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--c-interesting);
+  background: var(--c-interesting-bg);
+  color: var(--c-interesting);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.next-similar-btn:hover {
+  background: var(--c-interesting-hover);
+}
+.next-similar-btn:active {
+  transform: scale(0.96);
 }

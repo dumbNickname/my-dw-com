@@ -20,6 +20,7 @@ const KEY = "mydw_profile_v1";
 const SEEN_CAP = 500;
 const RECENT_VIEW_CAP = 20;
 const LIBRARY_CAP = 200;
+const INTERESTING_CAP = 500;
 
 export type LibraryItem = {
   id: string;
@@ -34,6 +35,8 @@ export type LibraryItem = {
 export type SavedItem = LibraryItem;
 export type LikedItem = LibraryItem;
 
+export type InterestingItem = { id: string; lang: string };
+
 export type Profile = {
   version: 1;
   langs: string[];
@@ -45,6 +48,7 @@ export type Profile = {
   liked_ids: string[]; // mirrors `liked` for fast membership checks
   liked: LikedItem[]; // newest-first, cap LIBRARY_CAP
   saved: SavedItem[]; // newest-first, cap LIBRARY_CAP
+  interesting: InterestingItem[]; // newest-first, cap INTERESTING_CAP, deduped
 };
 
 const empty = (): Profile => ({
@@ -58,6 +62,7 @@ const empty = (): Profile => ({
   liked_ids: [],
   liked: [],
   saved: [],
+  interesting: [],
 });
 
 const isBrowser = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -158,6 +163,12 @@ export function toggleSave(p: Profile, id: string, snapshot: Omit<LibraryItem, "
 
 export function isSaved(p: Profile, id: string): boolean {
   return p.saved.some((s) => s.id === id);
+}
+
+export function addInteresting(p: Profile, id: string, lang: string): Profile {
+  if (p.interesting.some((i) => i.id === id)) return p;
+  const next = [{ id, lang }, ...p.interesting].slice(0, INTERESTING_CAP);
+  return { ...p, interesting: next };
 }
 
 /** Total items in the user's library (saved + liked, deduped by id). */

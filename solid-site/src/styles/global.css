@@ -49,6 +49,14 @@
   --radius-lg: 18px;
   --radius-pill: 999px;
 
+  /* Swipe / navigation accents */
+  --c-interesting: #2e9e6e;
+  --c-interesting-bg: rgba(46, 158, 110, 0.10);
+  --c-interesting-hover: rgba(46, 158, 110, 0.18);
+  --c-advance: #6b7f96;
+  --c-advance-bg: rgba(107, 127, 150, 0.08);
+  --c-advance-hover: rgba(107, 127, 150, 0.16);
+
   /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 140ms;
@@ -74,6 +82,13 @@
   --c-primary: #05b2fc;     /* light blue reads better on dark */
   --c-primary-ink: #000821;
   --c-accent: #fae000;
+
+  --c-interesting: #5bd4a0;
+  --c-interesting-bg: rgba(91, 212, 160, 0.10);
+  --c-interesting-hover: rgba(91, 212, 160, 0.18);
+  --c-advance: #8fa5bb;
+  --c-advance-bg: rgba(143, 165, 187, 0.08);
+  --c-advance-hover: rgba(143, 165, 187, 0.16);
 }
 
 /* ───── Resets ───── */
