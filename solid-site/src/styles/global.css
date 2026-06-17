@@ -16,17 +16,17 @@
  */
 
 :root {
-  /* Surfaces */
-  --c-bg: #f0f6fa;          /* BLUE_GREY_01 */
-  --c-surface: #ffffff;
-  --c-surface-2: #f0f6fa;
-  --c-border: #cde1ee;      /* BLUE_GREY_02 */
-  --c-border-strong: #99b5c9;
+  /* Surfaces — DW palette */
+  --c-bg: #CDE1EE;          /* BLUE_GREY_02 */
+  --c-surface: #F0F6FA;     /* BLUE_GREY_01 */
+  --c-surface-2: #CDE1EE;   /* BLUE_GREY_02 */
+  --c-border: #99B5C9;      /* BLUE_GREY_03 */
+  --c-border-strong: #5C718A; /* BLUE_GREY_04 */
 
   /* Text */
   --c-text: #081336;        /* DARK_BLUE_GREY_01 */
-  --c-text-mute: #5c718a;   /* BLUE_GREY_04 */
-  --c-text-soft: #445d7b;   /* BLUE_GREY_05 */
+  --c-text-mute: #5C718A;   /* BLUE_GREY_04 */
+  --c-text-soft: #445D7B;   /* BLUE_GREY_05 */
 
   /* Brand & accents */
   --c-primary: #002186;     /* DW_DARK_BLUE */
