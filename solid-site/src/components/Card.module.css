@@ -157,6 +157,14 @@
   }
 }
 
+/* Inline body images (from <figure> in article HTML). */
+
+.body-img {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
 /* "Next similar" button at bottom of expanded article body. */
 
 .next-similar-btn {

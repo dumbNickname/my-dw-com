@@ -1,29 +1,7 @@
-/**
- * Strip HTML and decode entities into clean paragraphs.
- *
- * The card body field returns full DW article HTML with `<p>`, `<h2>`,
- * `<figure>`, raw embed `<div>`s, `<video>` tags, and so on. M3 will
- * ship a proper DOMPurify-based sanitiser that preserves the structure
- * and rewrites embed placeholders. For this slice we render plain
- * paragraphs only, which sidesteps every XSS surface and keeps the
- * dependency footprint at zero.
- *
- * Strategy:
- *   1. Drop entire `<script>`, `<style>`, `<video>`, `<audio>`,
- *      `<figure>`, `<svg>`, and embed `<div>`s — these never have
- *      meaningful inline text we'd want to surface.
- *   2. Convert `</p>`, `</h*>`, `</li>`, `</div>` to a paragraph break
- *      sentinel so we can split into paragraphs after stripping.
- *   3. Strip remaining tags.
- *   4. Decode the small set of entities DW actually emits (we sampled
- *      `&#160;`, `&amp;`, `&quot;`, `&lt;`, `&gt;`, `&apos;`).
- *   5. Split on the sentinel, trim, drop empty.
- */
-
-const SENTINEL = "\u2407"; // unlikely to appear in content
+const SENTINEL = "\u2407";
 const BLOCK_BREAKS = /<\/(?:p|h[1-6]|li|div|blockquote|tr)>/gi;
 const STRIP_BLOCKS =
-  /<(script|style|video|audio|figure|svg|iframe|object|embed|noscript)[\s\S]*?<\/\1>/gi;
+  /<(script|style|video|audio|svg|iframe|object|embed|noscript)[\s\S]*?<\/\1>/gi;
 const TAG = /<[^>]+>/g;
 const NAMED_ENTITIES: Record<string, string> = {
   amp: "&",
@@ -48,18 +26,73 @@ function decodeEntities(s: string): string {
   });
 }
 
-/**
- * Returns an array of plain-text paragraphs in source order. Empty input
- * → empty array. Pass to a `<p>` map in the component.
- */
-export function htmlToParagraphs(html: string | null | undefined): string[] {
+const FIGURE_RE = /<figure[^>]*>[\s\S]*?<\/figure>/gi;
+const DATA_URL_RE = /data-url="([^"]+)"/;
+const ALT_RE = /alt="([^"]*)"/;
+
+function resolveBodyImageUrl(dataUrl: string): string {
+  if (dataUrl.includes("${formatId}")) {
+    return dataUrl.replace("${formatId}", "902");
+  }
+  return dataUrl;
+}
+
+export type BodyBlock =
+  | { kind: "text"; content: string }
+  | { kind: "image"; src: string; alt: string };
+
+export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
   if (!html) return [];
-  const noBlocks = html.replace(STRIP_BLOCKS, " ");
-  const withBreaks = noBlocks.replace(BLOCK_BREAKS, SENTINEL);
-  const stripped = withBreaks.replace(TAG, " ");
-  const decoded = decodeEntities(stripped);
-  return decoded
-    .split(SENTINEL)
-    .map((p) => p.replace(/\s+/g, " ").trim())
-    .filter((p) => p.length > 0);
+
+  const blocks: BodyBlock[] = [];
+  let cursor = 0;
+
+  const noScripts = html.replace(STRIP_BLOCKS, " ");
+
+  const figures: { index: number; length: number; src: string; alt: string }[] = [];
+  let fm: RegExpExecArray | null;
+  const figRe = new RegExp(FIGURE_RE.source, "gi");
+  while ((fm = figRe.exec(noScripts)) !== null) {
+    const urlMatch = DATA_URL_RE.exec(fm[0]);
+    if (!urlMatch) continue;
+    const altMatch = ALT_RE.exec(fm[0]);
+    figures.push({
+      index: fm.index,
+      length: fm[0].length,
+      src: resolveBodyImageUrl(urlMatch[1]),
+      alt: altMatch ? decodeEntities(altMatch[1]) : "",
+    });
+  }
+
+  function extractText(chunk: string): string[] {
+    const withBreaks = chunk.replace(BLOCK_BREAKS, SENTINEL);
+    const stripped = withBreaks.replace(TAG, " ");
+    const decoded = decodeEntities(stripped);
+    return decoded
+      .split(SENTINEL)
+      .map((p) => p.replace(/\s+/g, " ").trim())
+      .filter((p) => p.length > 0);
+  }
+
+  for (const fig of figures) {
+    const before = noScripts.slice(cursor, fig.index);
+    for (const t of extractText(before)) {
+      blocks.push({ kind: "text", content: t });
+    }
+    blocks.push({ kind: "image", src: fig.src, alt: fig.alt });
+    cursor = fig.index + fig.length;
+  }
+
+  const tail = noScripts.slice(cursor);
+  for (const t of extractText(tail)) {
+    blocks.push({ kind: "text", content: t });
+  }
+
+  return blocks;
+}
+
+export function htmlToParagraphs(html: string | null | undefined): string[] {
+  return htmlToBlocks(html)
+    .filter((b): b is Extract<BodyBlock, { kind: "text" }> => b.kind === "text")
+    .map((b) => b.content);
 }

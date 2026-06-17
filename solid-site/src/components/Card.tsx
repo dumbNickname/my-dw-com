@@ -19,7 +19,7 @@ import { Show, createSignal, For } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
 import { fetchBody } from "~/lib/graphql";
-import { htmlToParagraphs } from "~/lib/htmlText";
+import { htmlToBlocks, type BodyBlock } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
 
 import styles from "./Card.module.css";
@@ -64,7 +64,7 @@ export function Card(props: CardProps) {
   const dwLink = () => buildDwLink(props.content);
 
   const [expanded, setExpanded] = createSignal(false);
-  const [bodyParas, setBodyParas] = createSignal<string[] | null>(null);
+  const [bodyBlocks, setBodyBlocks] = createSignal<BodyBlock[] | null>(null);
   const [bodyLoading, setBodyLoading] = createSignal(false);
   const [bodyError, setBodyError] = createSignal(false);
 
@@ -74,14 +74,14 @@ export function Card(props: CardProps) {
       return;
     }
     setExpanded(true);
-    if (bodyParas() !== null) return; // already loaded for this card
+    if (bodyBlocks() !== null) return;
     setBodyLoading(true);
     setBodyError(false);
     try {
       const html = await fetchBody(props.content.id, props.content.language);
-      const paras = htmlToParagraphs(html);
-      setBodyParas(paras);
-      if (paras.length === 0) setBodyError(true);
+      const blocks = htmlToBlocks(html);
+      setBodyBlocks(blocks);
+      if (blocks.length === 0) setBodyError(true);
     } catch {
       setBodyError(true);
     } finally {
@@ -137,8 +137,22 @@ export function Card(props: CardProps) {
                 </a>
               </p>
             </Show>
-            <Show when={!bodyLoading() && bodyParas() && bodyParas()!.length > 0}>
-              <For each={bodyParas()!}>{(p) => <p>{p}</p>}</For>
+            <Show when={!bodyLoading() && bodyBlocks() && bodyBlocks()!.length > 0}>
+              <For each={bodyBlocks()!}>
+                {(block) => (
+                  <Show when={block.kind === "text"} fallback={
+                    <img
+                      class={styles["body-img"]}
+                      src={(block as Extract<BodyBlock, { kind: "image" }>).src}
+                      alt={(block as Extract<BodyBlock, { kind: "image" }>).alt}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  }>
+                    <p>{(block as Extract<BodyBlock, { kind: "text" }>).content}</p>
+                  </Show>
+                )}
+              </For>
               <Show when={props.onNextSimilar}>
                 <button
                   type="button"
