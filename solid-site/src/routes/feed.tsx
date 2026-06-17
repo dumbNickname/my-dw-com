@@ -206,12 +206,16 @@ export default function Feed() {
 
     updateProfile(addInteresting(profile(), String(c.id), lang));
 
-    const candidates = await peach.similar(String(c.id), lang, 8);
+    const candidates = await peach.similar(String(c.id), lang, 12);
     const seen = new Set(profile().seen_ids);
-    const unseen = candidates.filter((x) => !seen.has(x.id)).slice(0, 3);
+    const inQueue = new Set(poolState.queue.map((x) => x.id));
+    const unseen = candidates.filter((x) => !seen.has(x.id) && !inQueue.has(x.id) && x.lang === lang);
+    const priority = unseen.slice(0, 3);
+    const rest = unseen.slice(3);
 
-    if (unseen.length > 0) {
-      poolState = { ...poolState, queue: [...unseen, ...poolState.queue] };
+    if (priority.length > 0 || rest.length > 0) {
+      poolState = { ...poolState, queue: [...priority, ...poolState.queue, ...rest] };
+      setState((prev) => prev.kind === "ready" ? { ...prev, next: null } : prev);
     }
     void handleNext();
   }
