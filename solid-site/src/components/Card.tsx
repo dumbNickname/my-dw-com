@@ -103,7 +103,8 @@ export type CardProps = {
 };
 
 export function Card(props: CardProps) {
-  const img = () => resolveImage(props.content.mainContentImage?.staticUrl, "60X", 720);
+  const cardWidth = () => typeof window !== "undefined" ? Math.min(window.innerWidth, 720) : 720;
+  const img = () => resolveImage(props.content.mainContentImage?.staticUrl, "60X", cardWidth());
   const dwLink = () => buildDwLink(props.content);
 
   const [expanded, setExpanded] = createSignal(false);
@@ -160,9 +161,6 @@ export function Card(props: CardProps) {
               class={styles["feed-card-img"]}
               src={img()}
               alt=""
-              loading="eager"
-              decoding="async"
-              fetchpriority="high"
             />
           </Show>
           <audio
@@ -177,9 +175,6 @@ export function Card(props: CardProps) {
             class={styles["feed-card-img"]}
             src={img()}
             alt=""
-            loading="eager"
-            decoding="async"
-            fetchpriority="high"
           />
         </Match>
       </Switch>
