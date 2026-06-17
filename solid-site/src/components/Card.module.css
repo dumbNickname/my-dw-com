@@ -17,6 +17,18 @@
   background: var(--c-surface-2);
 }
 
+.feed-card-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  object-fit: contain;
+}
+
+.feed-card-audio {
+  width: 100%;
+  padding: 12px 24px;
+}
+
 .feed-card-body {
   padding: 24px 24px 28px;
   display: flex;

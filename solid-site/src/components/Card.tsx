@@ -15,7 +15,7 @@
  *
  * "Next similar" button renders at the end of the expanded body text.
  */
-import { Show, createSignal, For } from "solid-js";
+import { Show, Switch, Match, createSignal, For, onMount, onCleanup } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
 import { fetchBody } from "~/lib/graphql";
@@ -49,6 +49,44 @@ const langShort = (lang: string | null | undefined): string =>
   (lang || "EN").toUpperCase().slice(0, 2);
 
 const summaryText = (c: CardContent): string => c.shortTeaser || c.teaser || "";
+
+function HlsVideo(props: { src: string; poster?: string }) {
+  let videoRef: HTMLVideoElement | undefined;
+  let hlsInstance: any;
+
+  onMount(() => {
+    if (!videoRef) return;
+    if (videoRef.canPlayType("application/vnd.apple.mpegurl")) {
+      videoRef.src = props.src;
+      return;
+    }
+    import("hls.js").then((mod) => {
+      const Hls = mod.default;
+      if (!Hls.isSupported() || !videoRef) return;
+      const hls = new Hls();
+      hls.loadSource(props.src);
+      hls.attachMedia(videoRef);
+      hlsInstance = hls;
+    }).catch(() => {
+      if (videoRef) videoRef.src = props.src;
+    });
+  });
+
+  onCleanup(() => {
+    if (hlsInstance) hlsInstance.destroy();
+  });
+
+  return (
+    <video
+      ref={videoRef}
+      class={styles["feed-card-video"]}
+      controls
+      playsinline
+      preload="metadata"
+      poster={props.poster}
+    />
+  );
+}
 
 export type CardProps = {
   content: CardContent;
@@ -89,18 +127,44 @@ export function Card(props: CardProps) {
     }
   }
 
+  const isVideo = () => props.content.modelType === "VIDEO" && !!props.content.hlsVideoSrc;
+  const isAudio = () => props.content.modelType === "AUDIO" && !!props.content.mp3Src;
+
   return (
     <article class={styles["feed-card"]} aria-label={props.content.title || "Article"}>
-      <Show when={img()}>
-        <img
-          class={styles["feed-card-img"]}
-          src={img()}
-          alt=""
-          loading="eager"
-          decoding="async"
-          fetchpriority="high"
-        />
-      </Show>
+      <Switch>
+        <Match when={isVideo()}>
+          <HlsVideo src={props.content.hlsVideoSrc!} poster={img()} />
+        </Match>
+        <Match when={isAudio()}>
+          <Show when={img()}>
+            <img
+              class={styles["feed-card-img"]}
+              src={img()}
+              alt=""
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+            />
+          </Show>
+          <audio
+            class={styles["feed-card-audio"]}
+            controls
+            preload="metadata"
+            src={props.content.mp3Src!}
+          />
+        </Match>
+        <Match when={img()}>
+          <img
+            class={styles["feed-card-img"]}
+            src={img()}
+            alt=""
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+          />
+        </Match>
+      </Switch>
 
       <div class={styles["feed-card-body"]}>
         <div class={styles["feed-card-meta"]}>

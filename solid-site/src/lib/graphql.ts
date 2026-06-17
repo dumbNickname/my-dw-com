@@ -115,6 +115,8 @@ export type CardContent = {
   namedUrl: string | null;
   formattedDurationInMinutes: string | null;
   duration: number | null;
+  hlsVideoSrc: string | null;
+  mp3Src: string | null;
 };
 
 type CardResponse = { content: CardContent | null };

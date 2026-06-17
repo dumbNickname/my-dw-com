@@ -32,6 +32,8 @@ const QUERIES = {
     }
     ... on UrlAspect { namedUrl }
     ... on PlaybackResourceAspect { formattedDurationInMinutes duration }
+    ... on Video { hlsVideoSrc }
+    ... on Audio { mp3Src }
   }
 }`,
   MyDwBody: `query MyDwBody($id: Int!, $lang: Language!) {
