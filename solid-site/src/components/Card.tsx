@@ -15,7 +15,7 @@
  *
  * "Next similar" button renders at the end of the expanded body text.
  */
-import { Show, Switch, Match, createSignal, For, onCleanup } from "solid-js";
+import { Show, Switch, Match, createSignal, For, onMount, onCleanup } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
 import { fetchBody } from "~/lib/graphql";
@@ -53,11 +53,9 @@ const summaryText = (c: CardContent): string => c.shortTeaser || c.teaser || "";
 function HlsVideo(props: { src: string; poster?: string }) {
   let videoRef: HTMLVideoElement | undefined;
   let hlsInstance: any;
-  let initialized = false;
 
-  function initHls() {
-    if (initialized || !videoRef) return;
-    initialized = true;
+  onMount(() => {
+    if (!videoRef) return;
     if (videoRef.canPlayType("application/vnd.apple.mpegurl")) {
       videoRef.src = props.src;
       return;
@@ -72,7 +70,7 @@ function HlsVideo(props: { src: string; poster?: string }) {
     }).catch(() => {
       if (videoRef) videoRef.src = props.src;
     });
-  }
+  });
 
   onCleanup(() => {
     if (hlsInstance) hlsInstance.destroy();
@@ -84,10 +82,8 @@ function HlsVideo(props: { src: string; poster?: string }) {
       class={styles["feed-card-video"]}
       controls
       playsinline
-      preload="none"
+      preload="metadata"
       poster={props.poster}
-      onPlay={() => initHls()}
-      onClick={() => initHls()}
     />
   );
 }
