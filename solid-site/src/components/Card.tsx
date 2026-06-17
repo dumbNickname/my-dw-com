@@ -129,6 +129,16 @@ export function Card(props: CardProps) {
 
   const isVideo = () => props.content.modelType === "VIDEO" && !!props.content.hlsVideoSrc;
   const isAudio = () => props.content.modelType === "AUDIO" && !!props.content.mp3Src;
+  const isGallery = () => props.content.modelType === "IMAGE_GALLERY" && !!props.content.extendedGalleryImages?.length;
+
+  const galleryItems = () =>
+    (props.content.extendedGalleryImages || [])
+      .filter((g) => g.assignedImage?.staticUrl)
+      .map((g) => ({
+        name: g.name,
+        description: g.description,
+        src: resolveImage(g.assignedImage!.staticUrl, "90X", 600) || "",
+      }));
 
   return (
     <article class={styles["feed-card"]} aria-label={props.content.title || "Article"}>
@@ -188,33 +198,26 @@ export function Card(props: CardProps) {
           <p class={styles["feed-card-summary"]}>{summaryText(props.content)}</p>
         </Show>
 
-        <Show when={expanded()}>
-          <div class={styles["feed-card-body-text"]} aria-live="polite">
-            <Show when={bodyLoading()}>
-              <p class={styles["feed-card-body-status"]}>Loading…</p>
-            </Show>
-            <Show when={!bodyLoading() && bodyError()}>
-              <p class={styles["feed-card-body-status"]}>
-                Couldn't load the full article.{" "}
-                <a class="canon-link" href={dwLink()} target="_blank" rel="noopener noreferrer">
-                  Open on dw.com ↗
-                </a>
-              </p>
-            </Show>
-            <Show when={!bodyLoading() && bodyBlocks() && bodyBlocks()!.length > 0}>
-              <For each={bodyBlocks()!}>
-                {(block) => (
-                  <Show when={block.kind === "text"} fallback={
+        <Switch>
+          <Match when={isGallery()}>
+            <div class={styles["feed-card-gallery"]}>
+              <For each={galleryItems()}>
+                {(item) => (
+                  <div class={styles["gallery-item"]}>
                     <img
-                      class={styles["body-img"]}
-                      src={(block as Extract<BodyBlock, { kind: "image" }>).src}
-                      alt={(block as Extract<BodyBlock, { kind: "image" }>).alt}
+                      class={styles["gallery-item-img"]}
+                      src={item.src}
+                      alt={item.name}
                       loading="lazy"
                       decoding="async"
                     />
-                  }>
-                    <p>{(block as Extract<BodyBlock, { kind: "text" }>).content}</p>
-                  </Show>
+                    <Show when={item.name}>
+                      <p class={styles["gallery-item-name"]}>{item.name}</p>
+                    </Show>
+                    <Show when={item.description}>
+                      <p class={styles["gallery-item-desc"]}>{item.description}</p>
+                    </Show>
+                  </div>
                 )}
               </For>
               <Show when={props.onNextSimilar}>
@@ -232,9 +235,58 @@ export function Card(props: CardProps) {
                   </svg>
                 </button>
               </Show>
+            </div>
+          </Match>
+          <Match when={true}>
+            <Show when={expanded()}>
+              <div class={styles["feed-card-body-text"]} aria-live="polite">
+                <Show when={bodyLoading()}>
+                  <p class={styles["feed-card-body-status"]}>Loading…</p>
+                </Show>
+                <Show when={!bodyLoading() && bodyError()}>
+                  <p class={styles["feed-card-body-status"]}>
+                    Couldn't load the full article.{" "}
+                    <a class="canon-link" href={dwLink()} target="_blank" rel="noopener noreferrer">
+                      Open on dw.com ↗
+                    </a>
+                  </p>
+                </Show>
+                <Show when={!bodyLoading() && bodyBlocks() && bodyBlocks()!.length > 0}>
+                  <For each={bodyBlocks()!}>
+                    {(block) => (
+                      <Show when={block.kind === "text"} fallback={
+                        <img
+                          class={styles["body-img"]}
+                          src={(block as Extract<BodyBlock, { kind: "image" }>).src}
+                          alt={(block as Extract<BodyBlock, { kind: "image" }>).alt}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      }>
+                        <p>{(block as Extract<BodyBlock, { kind: "text" }>).content}</p>
+                      </Show>
+                    )}
+                  </For>
+                  <Show when={props.onNextSimilar}>
+                    <button
+                      type="button"
+                      class={styles["next-similar-btn"]}
+                      onClick={() => props.onNextSimilar?.()}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 2l1.5 4.5H14l-3.5 2.8L12 14 8 11l-4 3 1.5-4.7L2 6.5h4.5z" />
+                      </svg>
+                      Next similar
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 3l5 5-5 5" />
+                      </svg>
+                    </button>
+                  </Show>
+                </Show>
+              </div>
             </Show>
-          </div>
-        </Show>
+          </Match>
+        </Switch>
       </div>
 
       <nav class={styles["action-bar"]} aria-label="Article actions">

@@ -1,7 +1,7 @@
 {
   "MyDwCard": {
-    "hash": "0691f3cc639504549c25a092219e44b167e3a625e46258a2b1118e8788143e9e",
-    "query": "query MyDwCard($id: Int!, $lang: Language!) {\n  content(id: $id, lang: $lang) {\n    ... on ModelAspect { id modelType language }\n    ... on NamedAspect { title }\n    ... on TeaserAspect { roadTeaserKicker }\n    ... on TextualAspect { shortTeaser teaser }\n    ... on DeliveryAspect { contentDate }\n    ... on AssociationsAspect {\n      categories { name originId }\n      regions { name originId }\n      mainContentImage { staticUrl }\n    }\n    ... on UrlAspect { namedUrl }\n    ... on PlaybackResourceAspect { formattedDurationInMinutes duration }\n    ... on Video { hlsVideoSrc }\n    ... on Audio { mp3Src }\n  }\n}"
+    "hash": "900af83a1ca273abab1d1cc5342eb7d6a1b531438d3f08d6635eec327b4e5d4f",
+    "query": "query MyDwCard($id: Int!, $lang: Language!) {\n  content(id: $id, lang: $lang) {\n    ... on ModelAspect { id modelType language }\n    ... on NamedAspect { title }\n    ... on TeaserAspect { roadTeaserKicker }\n    ... on TextualAspect { shortTeaser teaser }\n    ... on DeliveryAspect { contentDate }\n    ... on AssociationsAspect {\n      categories { name originId }\n      regions { name originId }\n      mainContentImage { staticUrl }\n    }\n    ... on UrlAspect { namedUrl }\n    ... on PlaybackResourceAspect { formattedDurationInMinutes duration }\n    ... on Video { hlsVideoSrc }\n    ... on Audio { mp3Src }\n    ... on ImageGallery { extendedGalleryImages { name description assignedImage { staticUrl } } }\n  }\n}"
   },
   "MyDwBody": {
     "hash": "a2e69b66aec187f04720eed816733737dea30be9639963abea2a171b0c0d3c35",

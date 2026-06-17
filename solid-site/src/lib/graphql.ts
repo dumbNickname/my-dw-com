@@ -117,6 +117,7 @@ export type CardContent = {
   duration: number | null;
   hlsVideoSrc: string | null;
   mp3Src: string | null;
+  extendedGalleryImages: { name: string; description: string; assignedImage: { staticUrl: string } | null }[] | null;
 };
 
 type CardResponse = { content: CardContent | null };

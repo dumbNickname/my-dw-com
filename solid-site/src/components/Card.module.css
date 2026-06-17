@@ -177,6 +177,48 @@
   object-fit: cover;
 }
 
+/* Gallery (IMAGE_GALLERY content type). */
+
+.feed-card-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 4px;
+}
+
+.gallery-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--c-border);
+}
+.gallery-item:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.gallery-item-img {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.gallery-item-name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--c-text);
+  line-height: 1.3;
+}
+
+.gallery-item-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-text-soft);
+}
+
 /* "Next similar" button at bottom of expanded article body. */
 
 .next-similar-btn {

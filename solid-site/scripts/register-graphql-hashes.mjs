@@ -34,6 +34,7 @@ const QUERIES = {
     ... on PlaybackResourceAspect { formattedDurationInMinutes duration }
     ... on Video { hlsVideoSrc }
     ... on Audio { mp3Src }
+    ... on ImageGallery { extendedGalleryImages { name description assignedImage { staticUrl } } }
   }
 }`,
   MyDwBody: `query MyDwBody($id: Int!, $lang: Language!) {
