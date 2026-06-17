@@ -29,6 +29,8 @@ export default createHandler(() => (
             content="A personalised, no-login reader for Deutsche Welle. Tap through stories that match your interests."
           />
           <link rel="icon" href={`${basePath}/favicon.svg`} type="image/svg+xml" />
+          <link rel="manifest" href={`${basePath}/manifest.json`} />
+          <link rel="apple-touch-icon" href={`${basePath}/icon-192.svg`} />
           {/* eslint-disable-next-line solid/no-innerhtml */}
           <script innerHTML={themeInitScript} />
           {assets}
