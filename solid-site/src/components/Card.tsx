@@ -82,6 +82,7 @@ function HlsVideo(props: { src: string; poster?: string }) {
       class={styles["feed-card-video"]}
       controls
       playsinline
+      disablepictureinpicture
       preload="metadata"
       poster={props.poster}
     />
