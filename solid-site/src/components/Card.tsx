@@ -15,7 +15,7 @@
  *
  * "Next similar" button renders at the end of the expanded body text.
  */
-import { Show, Switch, Match, createSignal, For, onMount, onCleanup } from "solid-js";
+import { Show, Switch, Match, createSignal, For, onCleanup } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
 import { fetchBody } from "~/lib/graphql";
@@ -53,9 +53,11 @@ const summaryText = (c: CardContent): string => c.shortTeaser || c.teaser || "";
 function HlsVideo(props: { src: string; poster?: string }) {
   let videoRef: HTMLVideoElement | undefined;
   let hlsInstance: any;
+  let initialized = false;
 
-  onMount(() => {
-    if (!videoRef) return;
+  function initHls() {
+    if (initialized || !videoRef) return;
+    initialized = true;
     if (videoRef.canPlayType("application/vnd.apple.mpegurl")) {
       videoRef.src = props.src;
       return;
@@ -70,7 +72,7 @@ function HlsVideo(props: { src: string; poster?: string }) {
     }).catch(() => {
       if (videoRef) videoRef.src = props.src;
     });
-  });
+  }
 
   onCleanup(() => {
     if (hlsInstance) hlsInstance.destroy();
@@ -82,8 +84,10 @@ function HlsVideo(props: { src: string; poster?: string }) {
       class={styles["feed-card-video"]}
       controls
       playsinline
-      preload="metadata"
+      preload="none"
       poster={props.poster}
+      onPlay={() => initHls()}
+      onClick={() => initHls()}
     />
   );
 }
@@ -95,6 +99,7 @@ export type CardProps = {
   onToggleLike: () => void;
   onToggleSave: () => void;
   onNextSimilar?: () => void;
+  expandRef?: (fn: () => void) => void;
 };
 
 export function Card(props: CardProps) {
@@ -126,6 +131,8 @@ export function Card(props: CardProps) {
       setBodyLoading(false);
     }
   }
+
+  props.expandRef?.(() => void handleExpand());
 
   const isVideo = () => props.content.modelType === "VIDEO" && !!props.content.hlsVideoSrc;
   const isAudio = () => props.content.modelType === "AUDIO" && !!props.content.mp3Src;

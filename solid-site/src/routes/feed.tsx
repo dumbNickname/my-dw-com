@@ -234,6 +234,8 @@ export default function Feed() {
     void init();
   });
 
+  let expandFn: (() => void) | undefined;
+
   return (
     <div class="shell">
       <Title>my.dw.com — feed</Title>
@@ -244,7 +246,7 @@ export default function Feed() {
         {(() => {
           const s = state() as Extract<FeedState, { kind: "ready" }>;
           return (
-            <SwipeContainer onSwipe={handleSwipe}>
+            <SwipeContainer onSwipe={handleSwipe} onToggleExpand={() => expandFn?.()}>
               <Card
                 content={s.current}
                 liked={isLiked(profile(), String(s.current.id))}
@@ -252,6 +254,7 @@ export default function Feed() {
                 onToggleLike={() => onToggleLike(s.current)}
                 onToggleSave={() => onToggleSave(s.current)}
                 onNextSimilar={handleNextSimilar}
+                expandRef={(fn) => { expandFn = fn; }}
               />
             </SwipeContainer>
           );

@@ -9,6 +9,7 @@ export type SwipeDirection = "advance" | "interesting";
 
 export type SwipeContainerProps = {
   onSwipe: (dir: SwipeDirection) => void;
+  onToggleExpand?: () => void;
   children: JSX.Element;
 };
 
@@ -39,6 +40,9 @@ export function SwipeContainer(props: SwipeContainerProps) {
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
         props.onSwipe("interesting");
+      } else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && props.onToggleExpand) {
+        e.preventDefault();
+        props.onToggleExpand();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -140,7 +144,7 @@ export function SwipeContainer(props: SwipeContainerProps) {
       <div ref={overlayLeftRef} class={`${styles.overlay} ${styles["overlay-advance"]}`}>
         <div class={styles["overlay-inner"]}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 3l-5 5 5 5" />
+            <path d="M3 5l5 5 5-5" />
           </svg>
           <span>Next</span>
         </div>
@@ -166,7 +170,7 @@ export function SwipeContainer(props: SwipeContainerProps) {
         aria-label="Skip to next article"
       >
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M11 3l-5 5 5 5" />
+          <path d="M3 5l5 5 5-5" />
         </svg>
         <span>Next</span>
       </button>
