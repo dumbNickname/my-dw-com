@@ -130,6 +130,7 @@ export function Card(props: CardProps) {
   const isVideo = () => props.content.modelType === "VIDEO" && !!props.content.hlsVideoSrc;
   const isAudio = () => props.content.modelType === "AUDIO" && !!props.content.mp3Src;
   const isGallery = () => props.content.modelType === "IMAGE_GALLERY" && !!props.content.extendedGalleryImages?.length;
+  const isLiveblog = () => props.content.modelType === "LIVEBLOG";
 
   const galleryItems = () =>
     (props.content.extendedGalleryImages || [])
@@ -282,6 +283,22 @@ export function Card(props: CardProps) {
                       </svg>
                     </button>
                   </Show>
+                </Show>
+                <Show when={isLiveblog()}>
+                  <a
+                    class={styles["liveblog-cta"]}
+                    href={dwLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                      <circle cx="8" cy="8" r="4" />
+                    </svg>
+                    Follow live updates on dw.com
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 4h6v6M10 14L20 4" />
+                    </svg>
+                  </a>
                 </Show>
               </div>
             </Show>

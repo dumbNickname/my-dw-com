@@ -244,3 +244,32 @@
 .next-similar-btn:active {
   transform: scale(0.96);
 }
+
+/* Liveblog CTA — prominent link to follow live on dw.com. */
+
+.liveblog-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--c-breaking);
+  background: color-mix(in oklab, var(--c-breaking) 8%, transparent);
+  color: var(--c-breaking);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.liveblog-cta:hover {
+  background: color-mix(in oklab, var(--c-breaking) 15%, transparent);
+}
+.liveblog-cta svg:first-child {
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
