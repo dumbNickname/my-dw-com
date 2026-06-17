@@ -50,8 +50,10 @@ Env vars (build-time):
 - **CSS modules** for component-scoped styles; tiny global stylesheet
   (`src/styles/global.css`) only for design tokens, resets, and a few
   shared utilities (`.btn`, `.shell`, `.section-*`, `.notice`).
-- **No runtime dependencies** beyond SolidJS itself. No state library, no
-  UI kit, no HTTP client. Native `fetch` + `localStorage` + Solid signals.
+- **hls.js** (sole runtime dependency beyond SolidJS) — dynamically
+  imported only when a VIDEO card mounts. Provides HLS playback on
+  Chrome/Firefox; Safari uses native HLS. Tree-shaken into its own
+  chunk (~160kB gzip).
 - **No proxy, no backend.** The one piece of server-side code is the
   Cloudflare Worker (§3), and it's a stateless 70-line CORS shim.
 
@@ -141,6 +143,9 @@ query MyDwCard($id: Int!, $lang: Language!) {
     }
     ... on UrlAspect { namedUrl }
     ... on PlaybackResourceAspect { formattedDurationInMinutes duration }
+    ... on Video { hlsVideoSrc }
+    ... on Audio { mp3Src }
+    ... on ImageGallery { extendedGalleryImages { name description assignedImage { staticUrl } } }
   }
 }
 
@@ -188,6 +193,11 @@ the **CSS** rendered width; the helper handles DPR (capped at 2).
 has no placeholder. `LibrarySheet` also has a render-time fallback for
 backward compatibility with old entries.
 
+**Hero image sizing**: `Card.tsx` passes
+`resolveImage(staticUrl, "60X", Math.min(window.innerWidth, 720))` so
+mobile devices don't overfetch. On a 375px 2x phone this yields format
+604 (767px) not 606 (1568px).
+
 ### 4.5 PEACH lang param
 
 PEACH accepts the GraphQL `Language` enum value directly (`ENGLISH`,
@@ -209,14 +219,29 @@ app footer's library badge updates without prop-drilling. If you add
 another consumer that needs reactive profile state, listen for the
 same event.
 
-### 4.7 Body HTML is plain text only (M3 will fix)
+Key profile fields beyond onboarding prefs:
+- `liked` / `liked_ids` — explicit likes with full snapshots (cap 200).
+  Seeds `peach.similar` for primary recommendations.
+- `saved` — bookmarks with full snapshots (cap 200). No rec effect.
+- `interesting` — `{id, lang}[]` only, cap 500, deduped. Accumulated
+  via right-swipe and "Next similar". Seeds a separate bucketed
+  `peach.similar` call used as backfill.
 
-`MyDwBody.text` is full DW article HTML with `<video>`, `<figure>`,
-embed `<div>`s, internal/external links, and so on. The current
-implementation in `lib/htmlText.ts` strips ALL tags and entity-decodes
-to plain paragraphs. Zero XSS surface. M3 will replace this with a
-DOMPurify-based sanitiser that preserves structure and rewrites embed
-placeholders. Until then: do not `innerHTML` anything you didn't strip.
+### 4.7 Body HTML: text + inline images
+
+`MyDwBody.text` is full DW article HTML. `lib/htmlText.ts` exposes two
+functions:
+
+- `htmlToBlocks(html)` — returns `BodyBlock[]` (union of `{kind:"text"}`
+  and `{kind:"image"}`), preserving source order. Images are extracted
+  from `<figure>` tags: `data-url` is resolved using format 902 (90X
+  group, 475px). All other tags are stripped. Zero XSS surface.
+- `htmlToParagraphs(html)` — backward-compat wrapper, text-only.
+
+`Card.tsx` uses `htmlToBlocks` and renders `<p>` and `<img>` inline.
+A future M3 could add DOMPurify for richer HTML (links, embeds), but
+the current approach covers paragraphs + images which is the bulk of
+DW article content.
 
 ---
 
@@ -228,10 +253,14 @@ solid-site/
 ├── scripts/
 │   ├── register-graphql-hashes.mjs APQ pre-registration
 │   └── copy-404.mjs                GH Pages SPA fallback
-├── public/                         static assets
+├── public/
+│   ├── favicon.svg                 app favicon (blue "m")
+│   ├── icon-192.svg                PWA icon 192px
+│   ├── icon-512.svg                PWA icon 512px
+│   └── manifest.json               PWA manifest (installable)
 └── src/
     ├── app.tsx                     Router root + Shell (header on /,
-    │                               footer + LibrarySheet everywhere)
+    │                               footer + LibrarySheet + theme toggle)
     ├── app.module.css              shell + footer styles
     ├── entry-client.tsx            client bootstrap (SolidStart default)
     ├── entry-server.tsx            HTML doc shell + theme init script
@@ -247,12 +276,13 @@ solid-site/
     │   ├── graphql.ts              APQ client + fetchCard + fetchBody
     │   ├── image.ts                resolveImage + format ladder
     │   ├── lang.ts                 LANGUAGES, browser autodetect
-    │   ├── htmlText.ts             plain-text body extractor (M3 target)
-    │   ├── pool.ts                 cold-start candidate pool
-    │   ├── profile.ts              localStorage profile + toggles
+    │   ├── htmlText.ts             body HTML → BodyBlock[] (text + images)
+    │   ├── pool.ts                 cold-start candidate pool + bucketed interesting
+    │   ├── profile.ts              localStorage profile + toggles + interesting
     │   └── libraryContext.ts       Solid context: openLibrary()
     ├── components/
-    │   ├── Card.tsx + .module.css  feed card + bottom action bar
+    │   ├── Card.tsx + .module.css  feed card (article/video/audio/gallery/liveblog)
+    │   ├── SwipeContainer.tsx + …  swipe gestures + desktop side buttons + keyboard
     │   ├── CarouselCard.tsx + …    onboarding carousel item
     │   ├── LibrarySheet.tsx + …    Saved/Liked bottom-sheet with tabs
     │   └── Skeleton.tsx + …        loading placeholders
@@ -301,6 +331,36 @@ solid-site/
   `Card.module.css`. The 420ms fade+slide ran on every Next-tap
   swap, producing a visible flash even on fast networks. Next-tap
   polish (image pre-load + skeleton-on-slow) is parked — see §7.
+- **Swipe UX (replacing Next button)**: feed navigation is now via
+  swipe gestures (mobile) or side buttons + keyboard (desktop). Left
+  swipe = advance/skip, right swipe = "interesting" (weak positive
+  signal). Card stays in place; overlay divs slide from screen edges
+  as visual feedback. Edge handles provide discoverability on mobile.
+  Desktop: vertical side buttons with hover color, keyboard ←/→ + ↑/↓
+  for expand. See `handoff/swipe-ux-spec.md` for full design spec.
+- **Interesting signal**: new `profile.interesting` list (`{id, lang}[]`,
+  cap 500, deduped). Right-swipe and "Next similar" add items.
+  Bucketed `peach.similar` seeding from interesting list with rotation;
+  used as backfill when liked-seeded results are exhausted.
+- **"Next similar" button**: at end of expanded article body. Adds to
+  interesting + injects 2-3 same-language similar items at top of pool
+  queue. Remaining unseen results appended to back of pool.
+- **Theme toggle**: button in app footer, toggles light/dark.
+- **Content type support**: Card renders differently per `modelType`:
+  - `ARTICLE` — hero image + text body with inline images
+  - `VIDEO` — HLS player (hls.js on Chrome/FF, native on Safari).
+    Loaded on mount, PiP disabled.
+  - `AUDIO` — hero image + native `<audio controls>` with mp3Src
+  - `IMAGE_GALLERY` — hero image + scrollable gallery (all images with
+    title/description, separated by lines). First gallery image is
+    deduped against hero if same ID.
+  - `LIVEBLOG` — article-style with "Follow live updates on dw.com" CTA
+    (pulsing red dot) after expanded body.
+- **PWA manifest**: app is installable. Custom SVG icons (192/512px),
+  standalone display, portrait orientation.
+- **Image sizing**: hero image target is `min(window.innerWidth, 720)`
+  instead of hardcoded 720, so mobile devices fetch appropriately
+  sized images (format 604 instead of 606 on 2x devices).
 
 ## 7. What's pending
 
@@ -332,9 +392,7 @@ In rough priority order.
 6. **`/article/:contentId` detail view** with DOMPurify body sanitiser
    (see §4.7).
 7. **`/saved` proper route** to replace the LibrarySheet stand-in.
-8. **Theme toggle UI** (palette already supports dark; flicker-prevention
-   script in `entry-server.tsx` reads `localStorage.mydw_theme`).
-9. **README screenshots** + reset-profile button in a settings panel.
+8. **README screenshots** + reset-profile button in a settings panel.
 
 Deeper-future items live in `handoff/future-work.md`.
 
@@ -371,8 +429,8 @@ Full discussion in `handoff/architecture-risks.md`.
   (This rule is from the opencode session prompt; if you're a human,
   use your judgement.)
 - **Profile mutations** go through the `toggleLike` / `toggleSave` /
-  `markSeen` helpers in `lib/profile.ts`. Don't mutate the localStorage
-  blob directly.
+  `addInteresting` / `markSeen` helpers in `lib/profile.ts`. Don't
+  mutate the localStorage blob directly.
 - **Persisted-query changes** require re-running `pnpm run register-hashes`
   AND committing the regenerated `src/data/query-hashes.json`. CI does
   this on every build, but local dev needs the file to be present.
