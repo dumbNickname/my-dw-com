@@ -35,26 +35,40 @@ export function SwipeContainer(props: SwipeContainerProps) {
 
   let hintTimers: number[] = [];
 
+  function setHintTransition(on: boolean) {
+    const dur = on ? "600ms" : "";
+    if (overlayLeftRef) overlayLeftRef.style.transitionDuration = dur;
+    if (overlayRightRef) overlayRightRef.style.transitionDuration = dur;
+  }
+
   function playHint() {
     if (isDesktop() || !props.showHint || sessionHintCount >= HINT_MAX) return;
     sessionHintCount += 1;
 
-    const peek = (dir: "left" | "right", amount: number, dur: number) => {
-      showOverlay(dir, amount);
-      hintTimers.push(window.setTimeout(() => resetOverlays(), dur));
-    };
-
     hintTimers.push(window.setTimeout(() => {
-      peek("left", 0.35, 800);
+      setHintTransition(true);
+      showOverlay("left", 0.5);
 
       hintTimers.push(window.setTimeout(() => {
-        peek("right", 0.35, 800);
+        resetOverlays();
 
         hintTimers.push(window.setTimeout(() => {
-          showOverlay("left", 0.55);
-          showOverlay("right", 0.55);
-          hintTimers.push(window.setTimeout(() => resetOverlays(), 1000));
-        }, 1000));
+          showOverlay("right", 0.5);
+
+          hintTimers.push(window.setTimeout(() => {
+            resetOverlays();
+
+            hintTimers.push(window.setTimeout(() => {
+              showOverlay("left", 0.7);
+              showOverlay("right", 0.7);
+
+              hintTimers.push(window.setTimeout(() => {
+                resetOverlays();
+                hintTimers.push(window.setTimeout(() => setHintTransition(false), 700));
+              }, 1400));
+            }, 800));
+          }, 1200));
+        }, 800));
       }, 1200));
     }, 4000));
   }
