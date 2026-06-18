@@ -24,11 +24,11 @@
  */
 import { Title } from "@solidjs/meta";
 import { useNavigate } from "@solidjs/router";
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, createMemo, onMount, Show } from "solid-js";
 
 import { Card } from "~/components/Card";
 import { CardSkeleton } from "~/components/Skeleton";
-import { SwipeContainer, type SwipeDirection, type ActionState } from "~/components/SwipeContainer";
+import { SwipeContainer, type SwipeDirection } from "~/components/SwipeContainer";
 import { fetchCard, type CardContent } from "~/lib/graphql";
 import { resolveImage } from "~/lib/image";
 import * as peach from "~/lib/peach";
@@ -246,48 +246,61 @@ export default function Feed() {
 
   let expandFn: (() => void) | undefined;
 
+  const currentCard = createMemo(() => {
+    const s = state();
+    return s.kind === "ready" ? s.current : null;
+  });
+
+  const isReady = () => state().kind === "ready";
+  const isLoading = () => state().kind === "loading";
+  const isEmpty = () => state().kind === "empty";
+  const isError = () => state().kind === "error";
+  const errorMessage = () => {
+    const s = state();
+    return s.kind === "error" ? s.message : "";
+  };
+
   return (
     <div class="shell">
       <Title>my.dw.com — feed</Title>
-      <Show when={state().kind === "loading"}>
+      <Show when={isLoading()}>
         <CardSkeleton />
       </Show>
-      <Show when={state().kind === "ready"}>
-        {(() => {
-          const s = state() as Extract<FeedState, { kind: "ready" }>;
-          const dwLink = () => s.current.namedUrl
-            ? `https://www.dw.com${s.current.namedUrl}`
-            : `https://www.dw.com/${(s.current.language || "ENGLISH").toLowerCase().slice(0, 2)}/a-${s.current.id}`;
+      <Show when={currentCard()}>
+        {(card) => {
+          const dwLink = () => {
+            const c = card();
+            return c.namedUrl
+              ? `https://www.dw.com${c.namedUrl}`
+              : `https://www.dw.com/${(c.language || "ENGLISH").toLowerCase().slice(0, 2)}/a-${c.id}`;
+          };
           return (
             <SwipeContainer
               onSwipe={handleSwipe}
               onToggleExpand={() => expandFn?.()}
               showHint={!profile().has_swiped}
-              hintKey={s.current.id}
-              actions={{
-                liked: isLiked(profile(), String(s.current.id)),
-                saved: isSaved(profile(), String(s.current.id)),
-                dwLink: dwLink(),
-                onToggleLike: () => onToggleLike(s.current),
-                onToggleSave: () => onToggleSave(s.current),
-                onToggleExpand: () => expandFn?.(),
-              }}
+              hintKey={card().id}
+              liked={isLiked(profile(), String(card().id))}
+              saved={isSaved(profile(), String(card().id))}
+              dwLink={dwLink()}
+              onToggleLike={() => onToggleLike(card())}
+              onToggleSave={() => onToggleSave(card())}
             >
               <Card
-                content={s.current}
-                liked={isLiked(profile(), String(s.current.id))}
-                saved={isSaved(profile(), String(s.current.id))}
-                onToggleLike={() => onToggleLike(s.current)}
-                onToggleSave={() => onToggleSave(s.current)}
+                content={card()}
+                liked={isLiked(profile(), String(card().id))}
+                saved={isSaved(profile(), String(card().id))}
+                onToggleLike={() => onToggleLike(card())}
+                onToggleSave={() => onToggleSave(card())}
                 onNextSimilar={handleNextSimilar}
                 onNavigate={handleNavigate}
                 expandRef={(fn) => { expandFn = fn; }}
               />
             </SwipeContainer>
           );
-        })()}
+        }}
       </Show>
-      <Show when={state().kind === "empty"}>
+      <Show when={isEmpty()}>
         <div class="notice">
           <strong>You've seen everything we have for now.</strong>
           <br />
@@ -303,26 +316,21 @@ export default function Feed() {
           </div>
         </div>
       </Show>
-      <Show when={state().kind === "error"}>
-        {(() => {
-          const s = state() as Extract<FeedState, { kind: "error" }>;
-          return (
-            <div class="notice">
-              <strong>{s.message}</strong>
-              <br />
-              Check your network and try again.
-              <div style={{ "margin-top": "16px" }}>
-                <button
-                  type="button"
-                  class="btn btn-ghost"
-                  onClick={() => init()}
-                >
-                  Retry
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+      <Show when={isError()}>
+        <div class="notice">
+          <strong>{errorMessage()}</strong>
+          <br />
+          Check your network and try again.
+          <div style={{ "margin-top": "16px" }}>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              onClick={() => init()}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
       </Show>
     </div>
   );

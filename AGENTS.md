@@ -474,7 +474,91 @@ Full discussion in `handoff/architecture-risks.md`.
 
 ---
 
-## 10. External references
+## 10. SolidJS reactivity pitfalls (hard-won lessons)
+
+These are patterns that caused real bugs in this codebase. Read before
+touching feed.tsx or any component that consumes reactive state.
+
+### 10.1 Never use IIFEs inside `<Show>` to re-read signals
+
+```tsx
+// BAD — re-reads state() inside the IIFE, creating a second
+// reactive subscription. When state updates (even just the .next
+// field), the IIFE re-runs and tears down + recreates all children.
+<Show when={state().kind === "ready"}>
+  {(() => {
+    const s = state() as ...; // <- second read = full re-mount
+    return <Card content={s.current} />;
+  })()}
+</Show>
+
+// GOOD — derive a stable memo, use <Show>'s render-prop accessor.
+const currentCard = createMemo(() => {
+  const s = state();
+  return s.kind === "ready" ? s.current : null;
+});
+<Show when={currentCard()}>
+  {(card) => <Card content={card()} />}
+</Show>
+```
+
+The IIFE pattern looks harmless but causes full component tree
+teardown on every signal update that touches `state()` — including
+background pre-fetch completion (`setState({ ...s, next })`). This
+broke expand, scrolling, and hint timers.
+
+**Corollary**: inside a `<Show>` render-prop, always use the accessor
+(`card()`) in every reactive position — never capture it once with
+`const c = card()`. Capturing snapshots the value and prevents
+fine-grained updates when the underlying data changes:
+
+```tsx
+// BAD — c is captured once; when card changes, tree remounts.
+{(card) => { const c = card(); return <Card content={c} /> }}
+
+// GOOD — accessor used directly; Solid updates in-place.
+{(card) => <Card content={card()} />}
+```
+
+### 10.2 Conditional rendering: use `<Show>`, not `&&`
+
+```tsx
+// BAD — JS short-circuit is not tracked by Solid's reactivity.
+{props.actions && <div>...</div>}
+
+// GOOD — <Show> creates a proper reactive boundary.
+<Show when={props.actions}>
+  {(actions) => <div>{actions().liked}</div>}
+</Show>
+```
+
+### 10.3 Props are getters — never destructure
+
+In Solid, `props.foo` is a getter that tracks reactivity. Destructuring
+(`const { foo } = props`) captures the value once and loses reactivity.
+Always access via `props.foo` in JSX and callbacks.
+
+### 10.4 Stable references for imperative refs
+
+`expandRef` / `expandFn` patterns (passing a callback setter to a
+child so the parent can call the child's internal function) work fine
+in Solid because closures over signals are stable. But never try to
+read a signal's *value* through a ref callback and pass it as a prop
+— the prop will be stale. If you need reactive child state in the
+parent, lift the signal up or use a context.
+
+### 10.5 Desktop layout + scrollable content
+
+When the card body expands (article text loads), the entire article
+must scroll within a contained viewport (`.screen` div with
+`overflow-y: auto` and a `max-height`). The control panel must be
+outside the scrollable area. Never put sticky positioning on the
+control panel inside a scrollable parent — use CSS Grid with the
+screen and panel as siblings, and constrain only the screen's height.
+
+---
+
+## 11. External references
 
 The codebase intentionally has zero references to DW-internal repos at
 runtime, but these were the sources of truth during initial design and

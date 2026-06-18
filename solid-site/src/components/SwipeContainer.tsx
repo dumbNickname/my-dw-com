@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onMount, onCleanup, type JSX } from "solid-js";
+import { createSignal, createEffect, onMount, onCleanup, Show, type JSX } from "solid-js";
 import styles from "./SwipeContainer.module.css";
 
 const THRESHOLD = 80;
@@ -10,21 +10,16 @@ let sessionHintCount = 0;
 
 export type SwipeDirection = "advance" | "interesting";
 
-export type ActionState = {
-  liked: boolean;
-  saved: boolean;
-  dwLink: string;
-  onToggleLike: () => void;
-  onToggleSave: () => void;
-  onToggleExpand: () => void;
-};
-
 export type SwipeContainerProps = {
   onSwipe: (dir: SwipeDirection) => void;
   onToggleExpand?: () => void;
   showHint?: boolean;
   hintKey?: string | number;
-  actions?: ActionState;
+  liked?: boolean;
+  saved?: boolean;
+  dwLink?: string;
+  onToggleLike?: () => void;
+  onToggleSave?: () => void;
   children: JSX.Element;
 };
 
@@ -236,53 +231,55 @@ export function SwipeContainer(props: SwipeContainerProps) {
 
       {/* Desktop control panel (right side in vintage, below in classic) */}
       <div class={styles["control-panel"]}>
-        {props.actions && (
+        <Show when={props.onToggleLike}>
           <div class={styles["key-grid"]}>
             <button
               type="button"
               class={styles.key}
-              data-active={props.actions.liked}
-              onClick={() => props.actions!.onToggleLike()}
-              aria-label={props.actions.liked ? "Unlike" : "Like"}
+              data-active={props.liked}
+              onClick={() => props.onToggleLike?.()}
+              aria-label={props.liked ? "Unlike" : "Like"}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill={props.actions.liked ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={props.liked ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
                 <path d="M12 21s-7-4.35-9.5-8.5C.5 9 2 5 5.5 5c2 0 3.5 1.2 4.5 2.5C11 6.2 12.5 5 14.5 5 18 5 19.5 9 17.5 12.5 15 16.65 12 21 12 21z" />
               </svg>
             </button>
             <button
               type="button"
               class={styles.key}
-              data-active={props.actions.saved}
-              onClick={() => props.actions!.onToggleSave()}
-              aria-label={props.actions.saved ? "Unsave" : "Save"}
+              data-active={props.saved}
+              onClick={() => props.onToggleSave?.()}
+              aria-label={props.saved ? "Unsave" : "Save"}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill={props.actions.saved ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={props.saved ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
                 <path d="M6 4h12v17l-6-4-6 4z" />
               </svg>
             </button>
             <button
               type="button"
               class={styles.key}
-              onClick={() => props.actions!.onToggleExpand()}
+              onClick={() => props.onToggleExpand?.()}
               aria-label="Read / Collapse"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </button>
-            <a
-              class={styles.key}
-              href={props.actions.dwLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Open on dw.com"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
-                <path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" />
-              </svg>
-            </a>
+            <Show when={props.dwLink}>
+              <a
+                class={styles.key}
+                href={props.dwLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open on dw.com"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+                  <path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" />
+                </svg>
+              </a>
+            </Show>
           </div>
-        )}
+        </Show>
         <div class={styles["dial-divider"]} />
         <button
           type="button"
