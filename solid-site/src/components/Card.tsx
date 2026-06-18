@@ -15,7 +15,7 @@
  *
  * "Next similar" button renders at the end of the expanded body text.
  */
-import { Show, Switch, Match, createSignal, createResource, For, onMount, onCleanup } from "solid-js";
+import { Show, Switch, Match, createSignal, createResource, createEffect, For, onMount, onCleanup } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
 import { fetchBody, fetchWidget } from "~/lib/graphql";
@@ -212,6 +212,7 @@ export type CardProps = {
   onNextSimilar?: () => void;
   onNavigate?: (contentId: number, lang: string) => void;
   expandRef?: (fn: () => void) => void;
+  onExpandChange?: (expanded: boolean) => void;
 };
 
 export function Card(props: CardProps) {
@@ -224,12 +225,22 @@ export function Card(props: CardProps) {
   const [bodyLoading, setBodyLoading] = createSignal(false);
   const [bodyError, setBodyError] = createSignal(false);
 
+  createEffect(() => {
+    void props.content.id;
+    setExpanded(false);
+    setBodyBlocks(null);
+    setBodyLoading(false);
+    setBodyError(false);
+  });
+
   async function handleExpand() {
     if (expanded()) {
       setExpanded(false);
+      props.onExpandChange?.(false);
       return;
     }
     setExpanded(true);
+    props.onExpandChange?.(true);
     if (bodyBlocks() !== null) return;
     setBodyLoading(true);
     setBodyError(false);

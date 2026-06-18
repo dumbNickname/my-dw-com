@@ -245,6 +245,7 @@ export default function Feed() {
   });
 
   let expandFn: (() => void) | undefined;
+  const [cardExpanded, setCardExpanded] = createSignal(false);
 
   const currentCard = createMemo(() => {
     const s = state();
@@ -282,6 +283,7 @@ export default function Feed() {
               hintKey={card().id}
               liked={isLiked(profile(), String(card().id))}
               saved={isSaved(profile(), String(card().id))}
+              expanded={cardExpanded()}
               dwLink={dwLink()}
               onToggleLike={() => onToggleLike(card())}
               onToggleSave={() => onToggleSave(card())}
@@ -295,6 +297,7 @@ export default function Feed() {
                 onNextSimilar={handleNextSimilar}
                 onNavigate={handleNavigate}
                 expandRef={(fn) => { expandFn = fn; }}
+                onExpandChange={setCardExpanded}
               />
             </SwipeContainer>
           );

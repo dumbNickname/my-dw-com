@@ -119,6 +119,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
     overflow: hidden;
     height: calc(100vh - 120px);
+    margin: auto 0;
   }
 
   :global([data-layout="vintage"]) .screen {
@@ -126,6 +127,7 @@
     overflow-x: hidden;
     overscroll-behavior: contain;
     min-height: 0;
+    height: 100%;
   }
 
   :global([data-layout="vintage"]) .control-panel {
@@ -137,6 +139,7 @@
     padding: 24px 20px;
     min-width: 100px;
     min-height: 0;
+    height: 100%;
     border-left: 2px solid var(--c-border);
     background: color-mix(in oklab, var(--c-surface-2) 50%, var(--c-surface));
   }
@@ -157,33 +160,25 @@
     border-radius: 50%;
     border: 3px solid var(--c-border);
     background:
-      radial-gradient(circle at 35% 35%, rgba(255,255,255,0.08) 0%, transparent 60%),
+      radial-gradient(circle at 35% 35%, var(--highlight-knob) 0%, transparent 60%),
       repeating-conic-gradient(
         var(--c-surface-2) 0deg 5deg,
         var(--c-surface) 5deg 10deg
       );
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.15),
-      inset 0 -2px 3px rgba(255, 255, 255, 0.04),
-      0 3px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-knob);
     cursor: pointer;
     transition: border-color 0.4s var(--ease-out),
       box-shadow 0.4s var(--ease-out),
       transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
   }
   :global([data-layout="vintage"]) .dial-knob:hover {
-    box-shadow:
-      inset 0 3px 6px rgba(0, 0, 0, 0.15),
-      inset 0 -2px 3px rgba(255, 255, 255, 0.04),
-      0 3px 12px rgba(0, 0, 0, 0.18);
+    box-shadow: var(--shadow-knob-hover);
     transform: rotate(45deg);
   }
   :global([data-layout="vintage"]) .dial-knob:active {
     transform: rotate(90deg) scale(0.92);
     transition: transform 0.15s var(--ease-out);
-    box-shadow:
-      inset 0 3px 10px rgba(0, 0, 0, 0.25),
-      0 0 0 transparent;
+    box-shadow: var(--shadow-knob-active);
   }
 
   :global([data-layout="vintage"]) .dial-advance:hover .dial-knob {
@@ -225,12 +220,10 @@
     background:
       linear-gradient(
         180deg,
-        color-mix(in oklab, var(--c-surface) 100%, white) 0%,
+        var(--c-surface) 0%,
         var(--c-surface-2) 100%
       );
-    box-shadow:
-      0 2px 0 color-mix(in oklab, var(--c-border) 80%, black),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-key);
     color: var(--c-text-mute);
     cursor: pointer;
     transition: transform var(--dur-fast) var(--ease-out),
@@ -240,22 +233,16 @@
   }
   :global([data-layout="vintage"]) .key:hover {
     color: var(--c-text);
-    box-shadow:
-      0 1px 0 color-mix(in oklab, var(--c-border) 80%, black),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-key-hover);
     transform: translateY(1px);
   }
   :global([data-layout="vintage"]) .key:active {
-    box-shadow:
-      0 0 0 transparent,
-      inset 0 2px 4px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-key-active);
     transform: translateY(2px);
   }
   :global([data-layout="vintage"]) .key[data-active="true"] {
     color: var(--c-primary);
-    box-shadow:
-      0 0 0 transparent,
-      inset 0 2px 4px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-key-active);
     transform: translateY(2px);
     background: var(--c-surface-2);
   }

@@ -67,6 +67,15 @@
   /* Layout */
   --shell-max: 720px;       /* feed card max width on desktop */
   --header-h: 64px;
+
+  /* Vintage TV controls */
+  --shadow-knob: inset 0 3px 6px rgba(0, 0, 0, 0.15), inset 0 -2px 3px rgba(255, 255, 255, 0.06), 0 3px 8px rgba(0, 0, 0, 0.12);
+  --shadow-knob-hover: inset 0 3px 6px rgba(0, 0, 0, 0.15), inset 0 -2px 3px rgba(255, 255, 255, 0.06), 0 3px 12px rgba(0, 0, 0, 0.18);
+  --shadow-knob-active: inset 0 3px 10px rgba(0, 0, 0, 0.25), 0 0 0 transparent;
+  --shadow-key: 0 2px 0 rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-key-hover: 0 1px 0 rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --shadow-key-active: 0 0 0 transparent, inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  --highlight-knob: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] {
@@ -91,6 +100,14 @@
   --c-advance-bg: rgba(143, 165, 187, 0.45);
   --c-advance-hover: rgba(143, 165, 187, 0.55);
   --c-advance-handle: #8fa5bb;
+
+  --shadow-knob: inset 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 -1px 2px rgba(255, 255, 255, 0.1), 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-knob-hover: inset 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 -1px 2px rgba(255, 255, 255, 0.12), 0 2px 14px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-knob-active: inset 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-key: 0 2px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-key-hover: 0 1px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --shadow-key-active: 0 0 0 transparent, 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  --highlight-knob: rgba(255, 255, 255, 0.12);
 }
 
 /* ───── Resets ───── */

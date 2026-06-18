@@ -17,6 +17,7 @@ export type SwipeContainerProps = {
   hintKey?: string | number;
   liked?: boolean;
   saved?: boolean;
+  expanded?: boolean;
   dwLink?: string;
   onToggleLike?: () => void;
   onToggleSave?: () => void;
@@ -258,11 +259,12 @@ export function SwipeContainer(props: SwipeContainerProps) {
             <button
               type="button"
               class={styles.key}
+              data-active={props.expanded}
               onClick={() => props.onToggleExpand?.()}
-              aria-label="Read / Collapse"
+              aria-label={props.expanded ? "Collapse" : "Read"}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
-                <path d="M6 9l6 6 6-6" />
+                {props.expanded ? <path d="M6 15l6-6 6 6" /> : <path d="M6 9l6 6 6-6" />}
               </svg>
             </button>
             <Show when={props.dwLink}>
