@@ -240,6 +240,19 @@ functions:
   All other tags are stripped. Zero XSS surface.
 - `htmlToParagraphs(html)` — backward-compat wrapper, text-only.
 
+Text blocks carry `segments: TextSegment[]` — a union of `{type:"plain"}`
+and `{type:"link"}`. Links preserve the original `href`, classification
+(`internal` for `class="internal-link"` / `external` for others), and
+an optional `contentId` extracted from DW article URLs (`/a-{id}`,
+`/av-{id}`, `/video-{id}`, `/audio-{id}`, `/live-{id}`).
+SVG icons embedded in external links are stripped during extraction.
+`BodyParagraph` renders links with a `contentId` as in-app navigation
+(click injects the item into the pool queue and advances the feed).
+Internal links without a navigable content ID (topics `/t-`, sections
+`/s-`, persons `/person-`) open on `https://www.dw.com` in a new tab.
+External links open as-is with `target="_blank" rel="noopener
+noreferrer"`. No cookies or referrer data is forwarded.
+
 `Card.tsx` uses `htmlToBlocks` and renders `<p>`, `<img>`, and
 `<WidgetEmbed>` inline. Widget blocks trigger a separate GraphQL
 query (`fetchWidget` in `lib/graphql.ts`) that fetches the widget's

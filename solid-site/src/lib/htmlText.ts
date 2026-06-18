@@ -41,10 +41,77 @@ function resolveBodyImageUrl(dataUrl: string): string {
   return dataUrl;
 }
 
+export type TextSegment =
+  | { type: "plain"; text: string }
+  | { type: "link"; text: string; href: string; internal: boolean; contentId?: number };
+
 export type BodyBlock =
-  | { kind: "text"; content: string }
+  | { kind: "text"; segments: TextSegment[] }
   | { kind: "image"; src: string; alt: string }
   | { kind: "widget"; id: number; lang: string };
+
+const LINK_RE = /<a\s[^>]*>[\s\S]*?<\/a>/gi;
+const HREF_RE = /href="([^"]+)"/;
+const INTERNAL_CLASS_RE = /class="[^"]*\binternal-link\b[^"]*"/;
+const DW_CONTENT_ID_RE = /\/(?:a|av|video|audio|live)-(\d+)/;
+
+function extractSegments(chunk: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  let cursor = 0;
+  const linkRe = new RegExp(LINK_RE.source, "gi");
+  let lm: RegExpExecArray | null;
+
+  while ((lm = linkRe.exec(chunk)) !== null) {
+    if (lm.index > cursor) {
+      const plain = chunk.slice(cursor, lm.index).replace(TAG, " ");
+      const decoded = decodeEntities(plain).replace(/\s+/g, " ");
+      if (decoded.trim()) segments.push({ type: "plain", text: decoded });
+    }
+
+    const hrefMatch = HREF_RE.exec(lm[0]);
+    const linkText = decodeEntities(lm[0].replace(STRIP_BLOCKS, "").replace(TAG, "")).replace(/\s+/g, " ").trim();
+    if (hrefMatch && linkText) {
+      const isInternal = INTERNAL_CLASS_RE.test(lm[0]);
+      const href = decodeEntities(hrefMatch[1]);
+      const contentIdMatch = DW_CONTENT_ID_RE.exec(href);
+      segments.push({
+        type: "link",
+        text: linkText,
+        href,
+        internal: isInternal,
+        contentId: contentIdMatch ? Number(contentIdMatch[1]) : undefined,
+      });
+    } else if (linkText) {
+      segments.push({ type: "plain", text: linkText });
+    }
+
+    cursor = lm.index + lm[0].length;
+  }
+
+  if (cursor < chunk.length) {
+    const plain = chunk.slice(cursor).replace(TAG, " ");
+    const decoded = decodeEntities(plain).replace(/\s+/g, " ");
+    if (decoded.trim()) segments.push({ type: "plain", text: decoded });
+  }
+
+  return segments;
+}
+
+function extractParagraphs(chunk: string): BodyBlock[] {
+  const withBreaks = chunk.replace(BLOCK_BREAKS, SENTINEL);
+  const parts = withBreaks.split(SENTINEL);
+  const blocks: BodyBlock[] = [];
+
+  for (const part of parts) {
+    const segments = extractSegments(part);
+    const textContent = segments.map((s) => s.text).join("").trim();
+    if (textContent.length > 0) {
+      blocks.push({ kind: "text", segments });
+    }
+  }
+
+  return blocks;
+}
 
 export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
   if (!html) return [];
@@ -84,29 +151,15 @@ export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
 
   markers.sort((a, b) => a.index - b.index);
 
-  function extractText(chunk: string): string[] {
-    const withBreaks = chunk.replace(BLOCK_BREAKS, SENTINEL);
-    const stripped = withBreaks.replace(TAG, " ");
-    const decoded = decodeEntities(stripped);
-    return decoded
-      .split(SENTINEL)
-      .map((p) => p.replace(/\s+/g, " ").trim())
-      .filter((p) => p.length > 0);
-  }
-
   for (const m of markers) {
     const before = noScripts.slice(cursor, m.index);
-    for (const t of extractText(before)) {
-      blocks.push({ kind: "text", content: t });
-    }
+    blocks.push(...extractParagraphs(before));
     blocks.push(m.block);
     cursor = m.index + m.length;
   }
 
   const tail = noScripts.slice(cursor);
-  for (const t of extractText(tail)) {
-    blocks.push({ kind: "text", content: t });
-  }
+  blocks.push(...extractParagraphs(tail));
 
   return blocks;
 }
@@ -114,5 +167,5 @@ export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
 export function htmlToParagraphs(html: string | null | undefined): string[] {
   return htmlToBlocks(html)
     .filter((b): b is Extract<BodyBlock, { kind: "text" }> => b.kind === "text")
-    .map((b) => b.content);
+    .map((b) => b.segments.map((s) => s.text).join(""));
 }

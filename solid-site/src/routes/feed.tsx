@@ -220,6 +220,12 @@ export default function Feed() {
     void handleNext();
   }
 
+  function handleNavigate(contentId: number, lang: string) {
+    poolState = { ...poolState, queue: [{ id: String(contentId), lang }, ...poolState.queue] };
+    setState((prev) => prev.kind === "ready" ? { ...prev, next: null } : prev);
+    void handleNext();
+  }
+
   const onToggleLike = (c: CardContent) => {
     const fallbackLang = profile().langs[0] || "ENGLISH";
     updateProfile(toggleLike(profile(), String(c.id), snapshot(c, fallbackLang)));
@@ -254,6 +260,7 @@ export default function Feed() {
                 onToggleLike={() => onToggleLike(s.current)}
                 onToggleSave={() => onToggleSave(s.current)}
                 onNextSimilar={handleNextSimilar}
+                onNavigate={handleNavigate}
                 expandRef={(fn) => { expandFn = fn; }}
               />
             </SwipeContainer>

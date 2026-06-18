@@ -177,6 +177,17 @@
   object-fit: cover;
 }
 
+.body-link {
+  color: var(--c-primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--c-primary) 40%, transparent);
+  text-underline-offset: 2px;
+  transition: text-decoration-color var(--dur-fast) var(--ease-out);
+}
+.body-link:hover {
+  text-decoration-color: var(--c-primary);
+}
+
 .widget-iframe {
   width: 100%;
   border: none;

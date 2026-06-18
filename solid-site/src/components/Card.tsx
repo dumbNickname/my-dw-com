@@ -19,8 +19,9 @@ import { Show, Switch, Match, createSignal, createResource, For, onMount, onClea
 
 import type { CardContent } from "~/lib/graphql";
 import { fetchBody, fetchWidget } from "~/lib/graphql";
-import { htmlToBlocks, type BodyBlock } from "~/lib/htmlText";
+import { htmlToBlocks, type BodyBlock, type TextSegment } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
+import { byCode } from "~/lib/lang";
 
 import styles from "./Card.module.css";
 
@@ -111,8 +112,8 @@ function extractIframeHeight(embedCode: string): number {
 
 function WidgetEmbed(props: { id: number; lang: string }) {
   const langEnum = () => {
-    const l = props.lang.toUpperCase();
-    return l.length === 2 ? ({ EN: "ENGLISH", DE: "GERMAN", ES: "SPANISH", FR: "FRENCH", PT: "PORTUGUESE", AR: "ARABIC", ZH: "CHINESE", RU: "RUSSIAN", TR: "TURKISH", UK: "UKRAINIAN", PL: "POLISH", ID: "INDONESIAN", HI: "HINDI", BN: "BENGALI", UR: "URDU", FA: "PERSIAN", PS: "PASHTO", SW: "KISWAHILI", HA: "HAUSA", AM: "AMHARIC", MK: "MACEDONIAN", BS: "BOSNIAN", SR: "SERBIAN", HR: "CROATIAN", SQ: "ALBANIAN", EL: "GREEK", RO: "ROMANIAN", BG: "BULGARIAN", KK: "KAZAKH" }[l] || "ENGLISH") : l;
+    const code = props.lang.toLowerCase();
+    return byCode(code)?.enum ?? props.lang.toUpperCase();
   };
 
   const [data] = createResource(() => ({ id: props.id, lang: langEnum() }), (p) => fetchWidget(p.id, p.lang));
@@ -160,6 +161,48 @@ function WidgetEmbed(props: { id: number; lang: string }) {
   );
 }
 
+function BodyParagraph(props: { segments: TextSegment[]; lang: string; onNavigate?: (contentId: number, lang: string) => void }) {
+  return (
+    <p>
+      <For each={props.segments}>
+        {(seg) => (
+          <Switch>
+            <Match when={seg.type === "plain"}>
+              {(seg as Extract<TextSegment, { type: "plain" }>).text}
+            </Match>
+            <Match when={seg.type === "link"}>
+              {(() => {
+                const link = seg as Extract<TextSegment, { type: "link" }>;
+                if (link.contentId && props.onNavigate) {
+                  return (
+                    <a
+                      class={styles["body-link"]}
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); props.onNavigate!(link.contentId!, props.lang); }}
+                    >
+                      {link.text}
+                    </a>
+                  );
+                }
+                return (
+                  <a
+                    class={styles["body-link"]}
+                    href={link.internal ? `https://www.dw.com${link.href}` : link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.text}
+                  </a>
+                );
+              })()}
+            </Match>
+          </Switch>
+        )}
+      </For>
+    </p>
+  );
+}
+
 export type CardProps = {
   content: CardContent;
   liked: boolean;
@@ -167,6 +210,7 @@ export type CardProps = {
   onToggleLike: () => void;
   onToggleSave: () => void;
   onNextSimilar?: () => void;
+  onNavigate?: (contentId: number, lang: string) => void;
   expandRef?: (fn: () => void) => void;
 };
 
@@ -327,7 +371,11 @@ export function Card(props: CardProps) {
                     {(block) => (
                       <Switch>
                         <Match when={block.kind === "text"}>
-                          <p>{(block as Extract<BodyBlock, { kind: "text" }>).content}</p>
+                          <BodyParagraph
+                            segments={(block as Extract<BodyBlock, { kind: "text" }>).segments}
+                            lang={props.content.language}
+                            onNavigate={props.onNavigate}
+                          />
                         </Match>
                         <Match when={block.kind === "image"}>
                           <img
