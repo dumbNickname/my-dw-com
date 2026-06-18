@@ -118,7 +118,6 @@
       0 4px 24px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
     overflow: hidden;
-    height: calc(100vh - 120px);
     margin: auto 0;
   }
 
@@ -127,7 +126,7 @@
     overflow-x: hidden;
     overscroll-behavior: contain;
     min-height: 0;
-    height: 100%;
+    height: calc(100vh - 120px);
   }
 
   :global([data-layout="vintage"]) .control-panel {
