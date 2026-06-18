@@ -105,7 +105,7 @@ function Shell(props: { children: JSX.Element }) {
           </button>
           <button
             type="button"
-            class={styles["app-footer-btn"]}
+            class={`${styles["app-footer-btn"]} ${styles["app-footer-btn-desktop"]}`}
             onClick={toggleLayout}
             aria-label="Toggle vintage/classic layout"
           >
