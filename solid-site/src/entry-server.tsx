@@ -8,13 +8,15 @@ const themeInitScript = `(function () {
     var stored = localStorage.getItem("mydw_theme");
     var pref = stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     document.documentElement.setAttribute("data-theme", pref);
+    var layout = localStorage.getItem("mydw_layout") || "vintage";
+    document.documentElement.setAttribute("data-layout", layout);
   } catch (e) {}
 })();`;
 
 export default createHandler(() => (
   <StartServer
     document={({ assets, children, scripts }) => (
-      <html lang="en" data-theme="light">
+      <html lang="en" data-theme="light" data-layout="vintage">
         <head>
           <meta charset="utf-8" />
           <meta

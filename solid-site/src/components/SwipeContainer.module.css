@@ -86,20 +86,31 @@
   background: var(--c-interesting);
 }
 
-/* ───── Desktop TV-dial buttons (below card) ───── */
+/* ───── Desktop TV control panel (below card, sticky) ───── */
 
 .dial-row {
   display: none;
+  align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 20px 0 8px;
+  gap: 32px;
+  position: sticky;
+  bottom: 52px;
+  z-index: 12;
+  padding: 14px 24px;
+  margin-top: -1px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border: 1px solid var(--c-border);
+  border-top: none;
+  background: color-mix(in oklab, var(--c-surface) 94%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .dial {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: none;
   border: none;
   cursor: pointer;
@@ -114,41 +125,53 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  border: 2px solid var(--c-border);
-  background: var(--c-surface);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.08),
-    0 1px 2px rgba(0, 0, 0, 0.06);
+  border: 2.5px solid var(--c-border);
+  background:
+    repeating-conic-gradient(
+      var(--c-surface-2) 0deg 6deg,
+      var(--c-surface) 6deg 12deg
+    );
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.12),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.06),
+    0 2px 4px rgba(0, 0, 0, 0.08);
   transition: border-color var(--dur-base) var(--ease-out),
-    background var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out),
     transform var(--dur-fast) var(--ease-out);
 }
 .dial:active .dial-knob {
-  transform: scale(0.9);
-  box-shadow: inset 0 1px 6px rgba(0, 0, 0, 0.15);
+  transform: scale(0.88);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.22),
+    0 0 0 rgba(0, 0, 0, 0);
 }
 
 .dial-advance:hover .dial-knob {
   border-color: var(--c-advance-handle);
-  background: var(--c-advance-bg);
 }
 .dial-interesting:hover .dial-knob {
   border-color: var(--c-interesting);
-  background: var(--c-interesting-bg);
+}
+
+.dial-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--c-border);
+  opacity: 0.5;
 }
 
 .dial-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 @media (min-width: 900px) {
-  .dial-row {
+  :global([data-layout="vintage"]) .dial-row {
     display: flex;
   }
   .handle {

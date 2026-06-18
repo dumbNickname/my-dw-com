@@ -222,7 +222,7 @@ export function SwipeContainer(props: SwipeContainerProps) {
 
       {props.children}
 
-      {/* Desktop tuning buttons (below card) */}
+      {/* Desktop TV control panel (below card, sticky) */}
       <div class={styles["dial-row"]}>
         <button
           type="button"
@@ -231,12 +231,13 @@ export function SwipeContainer(props: SwipeContainerProps) {
           aria-label="Skip to next article"
         >
           <span class={styles["dial-knob"]}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 5l5 5 5-5" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 3l5 5-5 5" />
             </svg>
           </span>
           <span class={styles["dial-label"]}>Next</span>
         </button>
+        <div class={styles["dial-divider"]} />
         <button
           type="button"
           class={`${styles.dial} ${styles["dial-interesting"]}`}
@@ -244,7 +245,7 @@ export function SwipeContainer(props: SwipeContainerProps) {
           aria-label="Mark as interesting and continue"
         >
           <span class={styles["dial-knob"]}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M8 2l1.5 4.5H14l-3.5 2.8L12 14 8 11l-4 3 1.5-4.7L2 6.5h4.5z" />
             </svg>
           </span>

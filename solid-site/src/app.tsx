@@ -26,6 +26,13 @@ function toggleTheme() {
   try { localStorage.setItem("mydw_theme", next); } catch {}
 }
 
+function toggleLayout() {
+  const current = document.documentElement.getAttribute("data-layout") || "vintage";
+  const next = current === "vintage" ? "classic" : "vintage";
+  document.documentElement.setAttribute("data-layout", next);
+  try { localStorage.setItem("mydw_layout", next); } catch {}
+}
+
 /**
  * Inner shell — receives the active location so we can drop the top
  * chrome on screens where the reels card needs all the vertical space
@@ -95,6 +102,18 @@ function Shell(props: { children: JSX.Element }) {
               <path d="M12 3a9 9 0 1 0 0 18 5 5 0 0 1 0-10 3 3 0 0 0 0-6V3z" />
             </svg>
             <span>Theme</span>
+          </button>
+          <button
+            type="button"
+            class={styles["app-footer-btn"]}
+            onClick={toggleLayout}
+            aria-label="Toggle vintage/classic layout"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+              <rect x="2" y="4" width="20" height="13" rx="2" />
+              <path d="M8 21h8M12 17v4" />
+            </svg>
+            <span>Vintage</span>
           </button>
           <button
             type="button"
