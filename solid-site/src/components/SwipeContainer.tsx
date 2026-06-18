@@ -1,15 +1,20 @@
-import { createSignal, onMount, onCleanup, type JSX } from "solid-js";
+import { createSignal, createEffect, onMount, onCleanup, type JSX } from "solid-js";
 import styles from "./SwipeContainer.module.css";
 
 const THRESHOLD = 80;
 const HANDLE_THRESHOLD = 40;
 const ANGLE_RATIO = 2;
+const HINT_MAX = 3;
+
+let sessionHintCount = 0;
 
 export type SwipeDirection = "advance" | "interesting";
 
 export type SwipeContainerProps = {
   onSwipe: (dir: SwipeDirection) => void;
   onToggleExpand?: () => void;
+  showHint?: boolean;
+  hintKey?: string | number;
   children: JSX.Element;
 };
 
@@ -27,6 +32,37 @@ export function SwipeContainer(props: SwipeContainerProps) {
   let onHandle = false;
 
   const updateDesktop = () => setIsDesktop(window.innerWidth >= 900);
+
+  let hintTimers: number[] = [];
+
+  function playHint() {
+    if (isDesktop() || !props.showHint || sessionHintCount >= HINT_MAX) return;
+    sessionHintCount += 1;
+
+    const peek = (dir: "left" | "right", amount: number, dur: number) => {
+      showOverlay(dir, amount);
+      hintTimers.push(window.setTimeout(() => resetOverlays(), dur));
+    };
+
+    hintTimers.push(window.setTimeout(() => {
+      peek("left", 0.35, 800);
+
+      hintTimers.push(window.setTimeout(() => {
+        peek("right", 0.35, 800);
+
+        hintTimers.push(window.setTimeout(() => {
+          showOverlay("left", 0.55);
+          showOverlay("right", 0.55);
+          hintTimers.push(window.setTimeout(() => resetOverlays(), 1000));
+        }, 1000));
+      }, 1200));
+    }, 4000));
+  }
+
+  function clearHintTimers() {
+    hintTimers.forEach(clearTimeout);
+    hintTimers = [];
+  }
 
   onMount(() => {
     updateDesktop();
@@ -48,9 +84,17 @@ export function SwipeContainer(props: SwipeContainerProps) {
     window.addEventListener("keydown", handleKeyDown);
 
     onCleanup(() => {
+      clearHintTimers();
       window.removeEventListener("resize", updateDesktop);
       window.removeEventListener("keydown", handleKeyDown);
     });
+  });
+
+  createEffect(() => {
+    void props.hintKey;
+    clearHintTimers();
+    resetOverlays();
+    playHint();
   });
 
   const showOverlay = (dir: "left" | "right", progress: number) => {

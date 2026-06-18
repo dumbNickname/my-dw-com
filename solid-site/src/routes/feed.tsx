@@ -40,6 +40,7 @@ import {
   isSaved,
   load,
   markSeen,
+  markSwiped,
   markViewed,
   save,
   toggleLike,
@@ -191,6 +192,9 @@ export default function Feed() {
   function handleSwipe(dir: SwipeDirection) {
     const s = state();
     if (s.kind !== "ready") return;
+    if (!profile().has_swiped) {
+      updateProfile(markSwiped(profile()));
+    }
     if (dir === "interesting") {
       const c = s.current;
       updateProfile(addInteresting(profile(), String(c.id), c.language || profile().langs[0] || "ENGLISH"));
@@ -252,7 +256,7 @@ export default function Feed() {
         {(() => {
           const s = state() as Extract<FeedState, { kind: "ready" }>;
           return (
-            <SwipeContainer onSwipe={handleSwipe} onToggleExpand={() => expandFn?.()}>
+            <SwipeContainer onSwipe={handleSwipe} onToggleExpand={() => expandFn?.()} showHint={!profile().has_swiped} hintKey={s.current.id}>
               <Card
                 content={s.current}
                 liked={isLiked(profile(), String(s.current.id))}

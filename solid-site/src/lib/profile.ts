@@ -49,6 +49,7 @@ export type Profile = {
   liked: LikedItem[]; // newest-first, cap LIBRARY_CAP
   saved: SavedItem[]; // newest-first, cap LIBRARY_CAP
   interesting: InterestingItem[]; // newest-first, cap INTERESTING_CAP, deduped
+  has_swiped: boolean; // set true on first swipe gesture; controls hint animation
 };
 
 const empty = (): Profile => ({
@@ -63,6 +64,7 @@ const empty = (): Profile => ({
   liked: [],
   saved: [],
   interesting: [],
+  has_swiped: false,
 });
 
 const isBrowser = () => typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -163,6 +165,11 @@ export function toggleSave(p: Profile, id: string, snapshot: Omit<LibraryItem, "
 
 export function isSaved(p: Profile, id: string): boolean {
   return p.saved.some((s) => s.id === id);
+}
+
+export function markSwiped(p: Profile): Profile {
+  if (p.has_swiped) return p;
+  return { ...p, has_swiped: true };
 }
 
 export function addInteresting(p: Profile, id: string, lang: string): Profile {
