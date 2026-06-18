@@ -86,98 +86,155 @@
   background: var(--c-interesting);
 }
 
-/* ───── Desktop TV control panel (below card, sticky) ───── */
+/* ───── Desktop control panel ───── */
 
-.dial-row {
+.control-panel {
   display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  position: sticky;
-  bottom: 52px;
-  z-index: 12;
-  padding: 14px 24px;
-  margin-top: -1px;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  border: 1px solid var(--c-border);
-  border-top: none;
-  background: color-mix(in oklab, var(--c-surface) 94%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
-.dial {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--c-text-mute);
-  transition: color var(--dur-base) var(--ease-out);
-}
-.dial:hover {
-  color: var(--c-text);
-}
-
-.dial-knob {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 2.5px solid var(--c-border);
-  background:
-    repeating-conic-gradient(
-      var(--c-surface-2) 0deg 6deg,
-      var(--c-surface) 6deg 12deg
-    );
-  box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.12),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.06),
-    0 2px 4px rgba(0, 0, 0, 0.08);
-  transition: border-color var(--dur-base) var(--ease-out),
-    box-shadow var(--dur-base) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-.dial:active .dial-knob {
-  transform: scale(0.88);
-  box-shadow:
-    inset 0 2px 8px rgba(0, 0, 0, 0.22),
-    0 0 0 rgba(0, 0, 0, 0);
-}
-
-.dial-advance:hover .dial-knob {
-  border-color: var(--c-advance-handle);
-}
-.dial-interesting:hover .dial-knob {
-  border-color: var(--c-interesting);
-}
-
-.dial-divider {
-  width: 1px;
-  height: 32px;
-  background: var(--c-border);
-  opacity: 0.5;
-}
-
-.dial-label {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
+/* ───── Vintage TV layout (desktop only) ───── */
 
 @media (min-width: 900px) {
-  :global([data-layout="vintage"]) .dial-row {
-    display: flex;
-  }
   .handle {
     display: none;
   }
   .wrapper {
     touch-action: auto;
+  }
+
+  :global([data-layout="vintage"]) .wrapper {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0;
+    border-radius: 20px;
+    border: 3px solid color-mix(in oklab, var(--c-border) 80%, var(--c-text-mute));
+    background: var(--c-surface);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+  }
+
+  :global([data-layout="vintage"]) .control-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px 20px;
+    min-width: 100px;
+    border-left: 2px solid var(--c-border);
+    background: color-mix(in oklab, var(--c-surface-2) 50%, var(--c-surface));
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    max-height: calc(100vh - var(--header-h, 0px) - 60px);
+  }
+
+  :global([data-layout="vintage"]) .dial {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  :global([data-layout="vintage"]) .dial-knob {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid var(--c-border);
+    background:
+      radial-gradient(circle at 35% 35%, rgba(255,255,255,0.08) 0%, transparent 60%),
+      repeating-conic-gradient(
+        var(--c-surface-2) 0deg 5deg,
+        var(--c-surface) 5deg 10deg
+      );
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.15),
+      inset 0 -2px 3px rgba(255, 255, 255, 0.04),
+      0 3px 8px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    transition: border-color var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  :global([data-layout="vintage"]) .dial-knob:hover {
+    box-shadow:
+      inset 0 3px 6px rgba(0, 0, 0, 0.15),
+      inset 0 -2px 3px rgba(255, 255, 255, 0.04),
+      0 3px 12px rgba(0, 0, 0, 0.18);
+  }
+  :global([data-layout="vintage"]) .dial-knob:active {
+    transform: scale(0.88);
+    box-shadow:
+      inset 0 3px 10px rgba(0, 0, 0, 0.25),
+      0 0 0 transparent;
+  }
+
+  :global([data-layout="vintage"]) .dial-advance:hover .dial-knob {
+    border-color: var(--c-advance-handle);
+  }
+  :global([data-layout="vintage"]) .dial-interesting:hover .dial-knob {
+    border-color: var(--c-interesting);
+  }
+
+  :global([data-layout="vintage"]) .dial-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--c-text-mute);
+  }
+
+  :global([data-layout="vintage"]) .dial-divider {
+    width: 36px;
+    height: 1px;
+    background: var(--c-border);
+    opacity: 0.4;
+  }
+
+  /* Classic layout — simple buttons below */
+  :global([data-layout="classic"]) .control-panel {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px 0 8px;
+  }
+  :global([data-layout="classic"]) .control-panel .dial {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-text-soft);
+    transition: background var(--dur-base) var(--ease-out),
+      color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out);
+  }
+  :global([data-layout="classic"]) .control-panel .dial:hover {
+    background: var(--c-surface-2);
+    color: var(--c-text);
+  }
+  :global([data-layout="classic"]) .control-panel .dial-knob {
+    display: contents;
+  }
+  :global([data-layout="classic"]) .control-panel .dial-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  :global([data-layout="classic"]) .dial-divider {
+    display: none;
   }
 }

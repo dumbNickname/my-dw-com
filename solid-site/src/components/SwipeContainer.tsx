@@ -222,8 +222,8 @@ export function SwipeContainer(props: SwipeContainerProps) {
 
       {props.children}
 
-      {/* Desktop TV control panel (below card, sticky) */}
-      <div class={styles["dial-row"]}>
+      {/* Desktop control panel (right side in vintage, below in classic) */}
+      <div class={styles["control-panel"]}>
         <button
           type="button"
           class={`${styles.dial} ${styles["dial-advance"]}`}
