@@ -84,6 +84,7 @@ function Shell(props: { children: JSX.Element }) {
           <Suspense>{props.children}</Suspense>
         </main>
         <footer class={styles["app-footer"]} aria-label="App actions">
+          <a href={BASE_PATH + "/privacy"} class={styles["app-footer-link"]}>Privacy</a>
           <button
             type="button"
             class={styles["app-footer-btn"]}

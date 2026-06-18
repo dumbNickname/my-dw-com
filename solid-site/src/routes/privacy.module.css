@@ -1,0 +1,21 @@
+.privacy h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c-text);
+  margin: 24px 0 8px;
+}
+.privacy h2:first-of-type {
+  margin-top: 16px;
+}
+.privacy p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--c-text-soft);
+  margin: 0 0 12px;
+}
+.privacy code {
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--c-surface-2);
+}

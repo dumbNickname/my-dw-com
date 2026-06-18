@@ -94,3 +94,15 @@
   min-width: 18px;
   text-align: center;
 }
+
+.app-footer-link {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--c-text-mute);
+  text-decoration: none;
+  padding: 4px 8px;
+}
+.app-footer-link:hover {
+  color: var(--c-text-soft);
+  text-decoration: underline;
+}

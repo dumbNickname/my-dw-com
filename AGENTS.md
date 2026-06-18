@@ -227,21 +227,31 @@ Key profile fields beyond onboarding prefs:
   via right-swipe and "Next similar". Seeds a separate bucketed
   `peach.similar` call used as backfill.
 
-### 4.7 Body HTML: text + inline images
+### 4.7 Body HTML: text + inline images + widgets
 
 `MyDwBody.text` is full DW article HTML. `lib/htmlText.ts` exposes two
 functions:
 
-- `htmlToBlocks(html)` — returns `BodyBlock[]` (union of `{kind:"text"}`
-  and `{kind:"image"}`), preserving source order. Images are extracted
-  from `<figure>` tags: `data-url` is resolved using format 902 (90X
-  group, 475px). All other tags are stripped. Zero XSS surface.
+- `htmlToBlocks(html)` — returns `BodyBlock[]` (union of `{kind:"text"}`,
+  `{kind:"image"}`, and `{kind:"widget"}`), preserving source order.
+  Images are extracted from `<figure>` tags: `data-url` is resolved
+  using format 902 (90X group, 475px). Widgets are extracted from
+  `<div class="embed dw-widget">` tags with `data-id` attributes.
+  All other tags are stripped. Zero XSS surface.
 - `htmlToParagraphs(html)` — backward-compat wrapper, text-only.
 
-`Card.tsx` uses `htmlToBlocks` and renders `<p>` and `<img>` inline.
-A future M3 could add DOMPurify for richer HTML (links, embeds), but
-the current approach covers paragraphs + images which is the bulk of
-DW article content.
+`Card.tsx` uses `htmlToBlocks` and renders `<p>`, `<img>`, and
+`<WidgetEmbed>` inline. Widget blocks trigger a separate GraphQL
+query (`fetchWidget` in `lib/graphql.ts`) that fetches the widget's
+`embedCode`, `widgetType`, and `graphicType`. Only widgets with
+`widgetType === "GRAPHIC"` are rendered — this filters out newsletter
+signup widgets and other non-data embeds. The iframe `src` is
+extracted from the embed code and validated against an allowlist of
+hosts (`datawrapper.dwcdn.net`, `flo.uri.sh`, `app.flourish.studio`).
+Datawrapper's `message`-based auto-resize is supported via a
+`postMessage` listener on each `WidgetEmbed` instance.
+
+A future M3 could add DOMPurify for richer HTML (links, embeds).
 
 ---
 
@@ -273,10 +283,10 @@ solid-site/
     │   └── query-hashes.json       generated at build time
     ├── lib/
     │   ├── peach.ts                PEACH client (typed wrappers)
-    │   ├── graphql.ts              APQ client + fetchCard + fetchBody
+    │   ├── graphql.ts              APQ client + fetchCard + fetchBody + fetchWidget
     │   ├── image.ts                resolveImage + format ladder
     │   ├── lang.ts                 LANGUAGES, browser autodetect
-    │   ├── htmlText.ts             body HTML → BodyBlock[] (text + images)
+    │   ├── htmlText.ts             body HTML → BodyBlock[] (text + images + widgets)
     │   ├── pool.ts                 cold-start candidate pool + bucketed interesting
     │   ├── profile.ts              localStorage profile + toggles + interesting
     │   └── libraryContext.ts       Solid context: openLibrary()
@@ -290,6 +300,7 @@ solid-site/
         ├── index.tsx               / — onboarding
         ├── index.module.css        chips + section spacing
         ├── feed.tsx                /feed — the reels loop
+        ├── privacy.tsx + …         /privacy — localStorage-only privacy notice
         └── [...404].tsx            catch-all → redirect to /
 ```
 
@@ -361,6 +372,16 @@ solid-site/
 - **Image sizing**: hero image target is `min(window.innerWidth, 720)`
   instead of hardcoded 720, so mobile devices fetch appropriately
   sized images (format 604 instead of 606 on 2x devices).
+- **Widget embeds (infographics)**: `dw-widget` divs in article HTML are
+  extracted as `{kind:"widget"}` blocks. `WidgetEmbed` component fetches
+  widget metadata via a direct POST query, checks `widgetType === "GRAPHIC"`,
+  extracts the iframe `src` from `embedCode`, validates it against an
+  allowlist (`datawrapper.dwcdn.net`, `flo.uri.sh`, `app.flourish.studio`),
+  and renders a sandboxed iframe. Datawrapper auto-resize via `postMessage`
+  is supported. Newsletter/non-graphic widgets are silently skipped.
+- **Privacy page**: `/privacy` route with a simple disclosure that
+  all data is stored in localStorage, no cookies, no analytics. Footer
+  contains a "Privacy" link.
 
 ## 7. What's pending
 

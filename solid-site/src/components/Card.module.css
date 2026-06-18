@@ -177,6 +177,13 @@
   object-fit: cover;
 }
 
+.widget-iframe {
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+}
+
 /* Gallery (IMAGE_GALLERY content type). */
 
 .feed-card-gallery {

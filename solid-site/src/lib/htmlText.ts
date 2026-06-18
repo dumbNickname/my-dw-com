@@ -30,6 +30,10 @@ const FIGURE_RE = /<figure[^>]*>[\s\S]*?<\/figure>/gi;
 const DATA_URL_RE = /data-url="([^"]+)"/;
 const ALT_RE = /alt="([^"]*)"/;
 
+const WIDGET_RE = /<div[^>]*class="[^"]*\bdw-widget\b[^"]*"[^>]*><\/div>/gi;
+const WIDGET_ID_RE = /data-id="(\d+)"/;
+const WIDGET_LANG_RE = /data-lang-code="([^"]+)"/;
+
 function resolveBodyImageUrl(dataUrl: string): string {
   if (dataUrl.includes("${formatId}")) {
     return dataUrl.replace("${formatId}", "902");
@@ -39,7 +43,8 @@ function resolveBodyImageUrl(dataUrl: string): string {
 
 export type BodyBlock =
   | { kind: "text"; content: string }
-  | { kind: "image"; src: string; alt: string };
+  | { kind: "image"; src: string; alt: string }
+  | { kind: "widget"; id: number; lang: string };
 
 export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
   if (!html) return [];
@@ -49,20 +54,35 @@ export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
 
   const noScripts = html.replace(STRIP_BLOCKS, " ");
 
-  const figures: { index: number; length: number; src: string; alt: string }[] = [];
+  type Marker = { index: number; length: number; block: BodyBlock };
+  const markers: Marker[] = [];
+
   let fm: RegExpExecArray | null;
   const figRe = new RegExp(FIGURE_RE.source, "gi");
   while ((fm = figRe.exec(noScripts)) !== null) {
     const urlMatch = DATA_URL_RE.exec(fm[0]);
     if (!urlMatch) continue;
     const altMatch = ALT_RE.exec(fm[0]);
-    figures.push({
+    markers.push({
       index: fm.index,
       length: fm[0].length,
-      src: resolveBodyImageUrl(urlMatch[1]),
-      alt: altMatch ? decodeEntities(altMatch[1]) : "",
+      block: { kind: "image", src: resolveBodyImageUrl(urlMatch[1]), alt: altMatch ? decodeEntities(altMatch[1]) : "" },
     });
   }
+
+  const widRe = new RegExp(WIDGET_RE.source, "gi");
+  while ((fm = widRe.exec(noScripts)) !== null) {
+    const idMatch = WIDGET_ID_RE.exec(fm[0]);
+    if (!idMatch) continue;
+    const langMatch = WIDGET_LANG_RE.exec(fm[0]);
+    markers.push({
+      index: fm.index,
+      length: fm[0].length,
+      block: { kind: "widget", id: Number(idMatch[1]), lang: (langMatch?.[1] || "en").toUpperCase() },
+    });
+  }
+
+  markers.sort((a, b) => a.index - b.index);
 
   function extractText(chunk: string): string[] {
     const withBreaks = chunk.replace(BLOCK_BREAKS, SENTINEL);
@@ -74,13 +94,13 @@ export function htmlToBlocks(html: string | null | undefined): BodyBlock[] {
       .filter((p) => p.length > 0);
   }
 
-  for (const fig of figures) {
-    const before = noScripts.slice(cursor, fig.index);
+  for (const m of markers) {
+    const before = noScripts.slice(cursor, m.index);
     for (const t of extractText(before)) {
       blocks.push({ kind: "text", content: t });
     }
-    blocks.push({ kind: "image", src: fig.src, alt: fig.alt });
-    cursor = fig.index + fig.length;
+    blocks.push(m.block);
+    cursor = m.index + m.length;
   }
 
   const tail = noScripts.slice(cursor);

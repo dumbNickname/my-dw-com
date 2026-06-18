@@ -15,10 +15,10 @@
  *
  * "Next similar" button renders at the end of the expanded body text.
  */
-import { Show, Switch, Match, createSignal, For, onMount, onCleanup } from "solid-js";
+import { Show, Switch, Match, createSignal, createResource, For, onMount, onCleanup } from "solid-js";
 
 import type { CardContent } from "~/lib/graphql";
-import { fetchBody } from "~/lib/graphql";
+import { fetchBody, fetchWidget } from "~/lib/graphql";
 import { htmlToBlocks, type BodyBlock } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
 
@@ -86,6 +86,77 @@ function HlsVideo(props: { src: string; poster?: string }) {
       preload="metadata"
       poster={props.poster}
     />
+  );
+}
+
+const ALLOWED_IFRAME_HOSTS = ["datawrapper.dwcdn.net", "flo.uri.sh", "app.flourish.studio"];
+const IFRAME_SRC_RE = /src="([^"]+)"/;
+
+function extractIframeSrc(embedCode: string): string | null {
+  const m = IFRAME_SRC_RE.exec(embedCode);
+  if (!m) return null;
+  try {
+    const url = new URL(m[1]);
+    if (ALLOWED_IFRAME_HOSTS.some((h) => url.hostname === h || url.hostname.endsWith("." + h))) return m[1];
+  } catch { /* invalid URL */ }
+  return null;
+}
+
+const IFRAME_HEIGHT_RE = /height="(\d+)"/;
+
+function extractIframeHeight(embedCode: string): number {
+  const m = IFRAME_HEIGHT_RE.exec(embedCode);
+  return m ? Number(m[1]) : 400;
+}
+
+function WidgetEmbed(props: { id: number; lang: string }) {
+  const langEnum = () => {
+    const l = props.lang.toUpperCase();
+    return l.length === 2 ? ({ EN: "ENGLISH", DE: "GERMAN", ES: "SPANISH", FR: "FRENCH", PT: "PORTUGUESE", AR: "ARABIC", ZH: "CHINESE", RU: "RUSSIAN", TR: "TURKISH", UK: "UKRAINIAN", PL: "POLISH", ID: "INDONESIAN", HI: "HINDI", BN: "BENGALI", UR: "URDU", FA: "PERSIAN", PS: "PASHTO", SW: "KISWAHILI", HA: "HAUSA", AM: "AMHARIC", MK: "MACEDONIAN", BS: "BOSNIAN", SR: "SERBIAN", HR: "CROATIAN", SQ: "ALBANIAN", EL: "GREEK", RO: "ROMANIAN", BG: "BULGARIAN", KK: "KAZAKH" }[l] || "ENGLISH") : l;
+  };
+
+  const [data] = createResource(() => ({ id: props.id, lang: langEnum() }), (p) => fetchWidget(p.id, p.lang));
+
+  const iframeSrc = () => {
+    const d = data();
+    if (!d?.embedCode) return null;
+    if (d.widgetType !== "GRAPHIC") return null;
+    return extractIframeSrc(d.embedCode);
+  };
+
+  const iframeHeight = () => {
+    const d = data();
+    return d?.embedCode ? extractIframeHeight(d.embedCode) : 400;
+  };
+
+  let iframeRef: HTMLIFrameElement | undefined;
+
+  const onMessage = (e: MessageEvent) => {
+    if (!e.data?.["datawrapper-height"] || !iframeRef) return;
+    for (const key in e.data["datawrapper-height"]) {
+      if (iframeRef.contentWindow === e.source) {
+        iframeRef.style.height = e.data["datawrapper-height"][key] + "px";
+      }
+    }
+  };
+
+  onMount(() => window.addEventListener("message", onMessage));
+  onCleanup(() => window.removeEventListener("message", onMessage));
+
+  return (
+    <Show when={iframeSrc()}>
+      {(src) => (
+        <iframe
+          ref={iframeRef}
+          class={styles["widget-iframe"]}
+          src={src()}
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin"
+          style={{ height: `${iframeHeight()}px` }}
+          title="Data visualization"
+        />
+      )}
+    </Show>
   );
 }
 
@@ -254,17 +325,26 @@ export function Card(props: CardProps) {
                 <Show when={!bodyLoading() && bodyBlocks() && bodyBlocks()!.length > 0}>
                   <For each={bodyBlocks()!}>
                     {(block) => (
-                      <Show when={block.kind === "text"} fallback={
-                        <img
-                          class={styles["body-img"]}
-                          src={(block as Extract<BodyBlock, { kind: "image" }>).src}
-                          alt={(block as Extract<BodyBlock, { kind: "image" }>).alt}
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      }>
-                        <p>{(block as Extract<BodyBlock, { kind: "text" }>).content}</p>
-                      </Show>
+                      <Switch>
+                        <Match when={block.kind === "text"}>
+                          <p>{(block as Extract<BodyBlock, { kind: "text" }>).content}</p>
+                        </Match>
+                        <Match when={block.kind === "image"}>
+                          <img
+                            class={styles["body-img"]}
+                            src={(block as Extract<BodyBlock, { kind: "image" }>).src}
+                            alt={(block as Extract<BodyBlock, { kind: "image" }>).alt}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        </Match>
+                        <Match when={block.kind === "widget"}>
+                          <WidgetEmbed
+                            id={(block as Extract<BodyBlock, { kind: "widget" }>).id}
+                            lang={(block as Extract<BodyBlock, { kind: "widget" }>).lang}
+                          />
+                        </Match>
+                      </Switch>
                     )}
                   </For>
                   <Show when={props.onNextSimilar}>

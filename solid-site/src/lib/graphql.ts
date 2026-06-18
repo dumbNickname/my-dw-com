@@ -143,3 +143,45 @@ export async function fetchBody(contentId: string | number, lang: string): Promi
   const data = await execute<BodyResponse>("MyDwBody", { id, lang });
   return data?.content?.text ?? null;
 }
+
+export type WidgetData = {
+  embedCode: string | null;
+  widgetType: string | null;
+  graphicType: string | null;
+};
+
+const WIDGET_QUERY = `query MyDwWidget($id: Int!, $lang: Language!) {
+  content(id: $id, lang: $lang) {
+    ... on Widget { id embedCode widgetType graphicType }
+  }
+}`;
+
+const widgetCache = new Map<string, WidgetData | null>();
+
+export async function fetchWidget(contentId: number, lang: string): Promise<WidgetData | null> {
+  const key = `widget:${contentId}:${lang}`;
+  if (widgetCache.has(key)) return widgetCache.get(key)!;
+  try {
+    const res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apollo-require-preflight": "true",
+      },
+      body: JSON.stringify({ query: WIDGET_QUERY, variables: { id: contentId, lang } }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const content = json?.data?.content;
+    if (!content) { widgetCache.set(key, null); return null; }
+    const data: WidgetData = {
+      embedCode: content.embedCode ?? null,
+      widgetType: content.widgetType ?? null,
+      graphicType: content.graphicType ?? null,
+    };
+    widgetCache.set(key, data);
+    return data;
+  } catch {
+    return null;
+  }
+}
