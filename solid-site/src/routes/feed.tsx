@@ -28,7 +28,7 @@ import { createSignal, onMount, Show } from "solid-js";
 
 import { Card } from "~/components/Card";
 import { CardSkeleton } from "~/components/Skeleton";
-import { SwipeContainer, type SwipeDirection } from "~/components/SwipeContainer";
+import { SwipeContainer, type SwipeDirection, type ActionState } from "~/components/SwipeContainer";
 import { fetchCard, type CardContent } from "~/lib/graphql";
 import { resolveImage } from "~/lib/image";
 import * as peach from "~/lib/peach";
@@ -255,8 +255,24 @@ export default function Feed() {
       <Show when={state().kind === "ready"}>
         {(() => {
           const s = state() as Extract<FeedState, { kind: "ready" }>;
+          const dwLink = () => s.current.namedUrl
+            ? `https://www.dw.com${s.current.namedUrl}`
+            : `https://www.dw.com/${(s.current.language || "ENGLISH").toLowerCase().slice(0, 2)}/a-${s.current.id}`;
           return (
-            <SwipeContainer onSwipe={handleSwipe} onToggleExpand={() => expandFn?.()} showHint={!profile().has_swiped} hintKey={s.current.id}>
+            <SwipeContainer
+              onSwipe={handleSwipe}
+              onToggleExpand={() => expandFn?.()}
+              showHint={!profile().has_swiped}
+              hintKey={s.current.id}
+              actions={{
+                liked: isLiked(profile(), String(s.current.id)),
+                saved: isSaved(profile(), String(s.current.id)),
+                dwLink: dwLink(),
+                onToggleLike: () => onToggleLike(s.current),
+                onToggleSave: () => onToggleSave(s.current),
+                onToggleExpand: () => expandFn?.(),
+              }}
+            >
               <Card
                 content={s.current}
                 liked={isLiked(profile(), String(s.current.id))}

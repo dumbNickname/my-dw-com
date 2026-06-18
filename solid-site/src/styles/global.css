@@ -268,20 +268,3 @@ input:focus-visible {
     transition-duration: 0.001ms !important;
   }
 }
-
-/* ───── Vintage TV layout: card chrome adjustments (desktop) ───── */
-
-@media (min-width: 900px) {
-  [data-layout="vintage"] article > nav:last-child {
-    border-top: none;
-    position: static;
-    background: transparent;
-    justify-content: center;
-    gap: 2px;
-    padding: 8px 12px;
-  }
-  [data-layout="vintage"] article {
-    border: none;
-    border-radius: 0;
-  }
-}
