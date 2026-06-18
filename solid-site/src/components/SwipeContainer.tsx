@@ -220,31 +220,37 @@ export function SwipeContainer(props: SwipeContainerProps) {
       <div class={`${styles.handle} ${styles["handle-left"]}`} />
       <div class={`${styles.handle} ${styles["handle-right"]}`} />
 
-      {/* Desktop side buttons */}
-      <button
-        type="button"
-        class={`${styles["side-btn"]} ${styles["side-btn-advance"]}`}
-        onClick={() => props.onSwipe("advance")}
-        aria-label="Skip to next article"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 5l5 5 5-5" />
-        </svg>
-        <span>Next</span>
-      </button>
-      <button
-        type="button"
-        class={`${styles["side-btn"]} ${styles["side-btn-interesting"]}`}
-        onClick={() => props.onSwipe("interesting")}
-        aria-label="Mark as interesting and continue"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 2l1.5 4.5H14l-3.5 2.8L12 14 8 11l-4 3 1.5-4.7L2 6.5h4.5z" />
-        </svg>
-        <span>Interesting</span>
-      </button>
-
       {props.children}
+
+      {/* Desktop tuning buttons (below card) */}
+      <div class={styles["dial-row"]}>
+        <button
+          type="button"
+          class={`${styles.dial} ${styles["dial-advance"]}`}
+          onClick={() => props.onSwipe("advance")}
+          aria-label="Skip to next article"
+        >
+          <span class={styles["dial-knob"]}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 5l5 5 5-5" />
+            </svg>
+          </span>
+          <span class={styles["dial-label"]}>Next</span>
+        </button>
+        <button
+          type="button"
+          class={`${styles.dial} ${styles["dial-interesting"]}`}
+          onClick={() => props.onSwipe("interesting")}
+          aria-label="Mark as interesting and continue"
+        >
+          <span class={styles["dial-knob"]}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2l1.5 4.5H14l-3.5 2.8L12 14 8 11l-4 3 1.5-4.7L2 6.5h4.5z" />
+            </svg>
+          </span>
+          <span class={styles["dial-label"]}>Interesting</span>
+        </button>
+      </div>
     </div>
   );
 }
