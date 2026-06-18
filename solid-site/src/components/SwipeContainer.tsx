@@ -47,29 +47,29 @@ export function SwipeContainer(props: SwipeContainerProps) {
 
     hintTimers.push(window.setTimeout(() => {
       setHintTransition(true);
-      showOverlay("left", 0.5);
+      showOverlay("left", 1);
 
       hintTimers.push(window.setTimeout(() => {
         resetOverlays();
 
         hintTimers.push(window.setTimeout(() => {
-          showOverlay("right", 0.5);
+          showOverlay("right", 1);
 
           hintTimers.push(window.setTimeout(() => {
             resetOverlays();
 
             hintTimers.push(window.setTimeout(() => {
-              showOverlay("left", 0.7);
-              showOverlay("right", 0.7);
+              showOverlay("left", 1);
+              showOverlay("right", 1);
 
               hintTimers.push(window.setTimeout(() => {
                 resetOverlays();
                 hintTimers.push(window.setTimeout(() => setHintTransition(false), 700));
-              }, 1400));
-            }, 800));
-          }, 1200));
-        }, 800));
-      }, 1200));
+              }, 1800));
+            }, 1000));
+          }, 1500));
+        }, 1000));
+      }, 1500));
     }, 4000));
   }
 
