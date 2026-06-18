@@ -85,54 +85,59 @@ function langList(profile: Profile): string[] {
   return ls.slice(0, LANG_FANOUT);
 }
 
+type TaggedRequest = { tag: "pref" | "general"; req: Promise<Candidate[]> };
+
 async function fetchCandidates(
   profile: Profile,
   opts: RefillOpts,
   interestingBucket: number,
-): Promise<{ candidates: Candidate[]; nextBucket: number }> {
+): Promise<{ pref: Candidate[]; general: Candidate[]; nextBucket: number }> {
   const langs = langList(profile);
   const primaryLang = langs[0];
   const tz = peach.browserTimezone();
 
-  const requests: Promise<Candidate[]>[] = [];
+  const requests: TaggedRequest[] = [];
 
   for (const lang of langs) {
     // Categories bucket — popularity within the user's picked topics.
+    // Tagged "pref" so cold-start prioritises these.
     if (profile.categories.length > 0) {
-      requests.push(
-        peach.mostViewed({
+      requests.push({
+        tag: "pref",
+        req: peach.mostViewed({
           lang,
           categories: profile.categories,
           amount: PER_SOURCE_AMOUNT,
         }),
-      );
+      });
     }
     // Regions bucket — popularity within the user's picked regions.
     if (profile.regions.length > 0) {
-      requests.push(
-        peach.mostViewed({
+      requests.push({
+        tag: "pref",
+        req: peach.mostViewed({
           lang,
           regions: profile.regions,
           amount: PER_SOURCE_AMOUNT,
         }),
-      );
+      });
     }
     // Unfiltered popularity baseline + fresh trending. Kept even when
     // chips are present so the feed never starves on a thin bucket.
-    requests.push(peach.mostViewed({ lang, amount: PER_SOURCE_AMOUNT }));
-    requests.push(peach.trendingTz(lang, tz, PER_SOURCE_AMOUNT));
+    requests.push({ tag: "general", req: peach.mostViewed({ lang, amount: PER_SOURCE_AMOUNT }) });
+    requests.push({ tag: "general", req: peach.trendingTz(lang, tz, PER_SOURCE_AMOUNT) });
   }
 
   // Onboarding-tapped articles → similar in their own language only.
   // (Each seed already has a language; cross-lang `similar` rarely
   // returns useful neighbours.)
   for (const seed of profile.seed_ids.slice(0, SEED_ONBOARDING_AMOUNT)) {
-    requests.push(peach.similar(seed, primaryLang, PER_SOURCE_AMOUNT));
+    requests.push({ tag: "pref", req: peach.similar(seed, primaryLang, PER_SOURCE_AMOUNT) });
   }
 
   // Recently-liked articles → similar.
   for (const item of profile.liked.slice(0, SEED_LIKED_AMOUNT)) {
-    requests.push(peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT));
+    requests.push({ tag: "pref", req: peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT) });
   }
 
   // FW4b re-mine: implicit-interest signal from what the user is
@@ -140,34 +145,40 @@ async function fetchCandidates(
   if (opts.seedFromRecent && opts.seedFromRecent.length > 0) {
     const seeds = pickRandom(opts.seedFromRecent, SEED_RECENT_AMOUNT);
     for (const seedId of seeds) {
-      requests.push(peach.similar(seedId, primaryLang, PER_SOURCE_AMOUNT));
+      requests.push({ tag: "general", req: peach.similar(seedId, primaryLang, PER_SOURCE_AMOUNT) });
     }
   }
 
+  // Interesting bucket — rotate through the interesting list in
+  // fixed-size windows. Wraps to the start when exhausted.
   let nextBucket = interestingBucket;
   if (profile.interesting.length > 0) {
     const start = interestingBucket * INTERESTING_BUCKET_SIZE;
     const bucket = profile.interesting.slice(start, start + INTERESTING_BUCKET_SIZE);
     if (bucket.length > 0) {
       for (const item of bucket) {
-        requests.push(peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT));
+        requests.push({ tag: "pref", req: peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT) });
       }
       nextBucket = interestingBucket + 1;
     } else {
       nextBucket = 0;
       const fallback = profile.interesting.slice(0, INTERESTING_BUCKET_SIZE);
       for (const item of fallback) {
-        requests.push(peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT));
+        requests.push({ tag: "pref", req: peach.similar(item.id, item.lang || primaryLang, PER_SOURCE_AMOUNT) });
       }
     }
   }
 
-  const settled = await Promise.allSettled(requests);
-  const all: Candidate[] = [];
-  for (const r of settled) {
-    if (r.status === "fulfilled") all.push(...r.value);
+  const settled = await Promise.allSettled(requests.map((r) => r.req));
+  const pref: Candidate[] = [];
+  const general: Candidate[] = [];
+  for (let i = 0; i < settled.length; i++) {
+    const r = settled[i];
+    if (r.status === "fulfilled") {
+      (requests[i].tag === "pref" ? pref : general).push(...r.value);
+    }
   }
-  return { candidates: all, nextBucket };
+  return { pref, general, nextBucket };
 }
 
 /**
@@ -187,19 +198,30 @@ export async function refill(
   const inQueue = new Set(state.queue.map((c) => c.id));
   const allowedLangs = new Set(langList(profile));
 
-  const { candidates: incoming, nextBucket } = await fetchCandidates(profile, opts, state.interestingBucket);
+  const { pref, general, nextBucket } = await fetchCandidates(profile, opts, state.interestingBucket);
 
-  const fresh: Candidate[] = [];
+  const dedup = (arr: Candidate[], extraSeen: Set<string>): Candidate[] => {
+    const out: Candidate[] = [];
+    for (const c of shuffle(arr)) {
+      if (!c.id) continue;
+      if (!allowedLangs.has(c.lang)) continue;
+      if (seen.has(c.id)) continue;
+      if (inQueue.has(c.id)) continue;
+      if (extraSeen.has(c.id)) continue;
+      out.push(c);
+      extraSeen.add(c.id);
+    }
+    return out;
+  };
+
   const freshIds = new Set<string>();
-  for (const c of shuffle(incoming)) {
-    if (!c.id) continue;
-    if (!allowedLangs.has(c.lang)) continue;
-    if (seen.has(c.id)) continue;
-    if (inQueue.has(c.id)) continue;
-    if (freshIds.has(c.id)) continue;
-    fresh.push(c);
-    freshIds.add(c.id);
-  }
+  const prefFresh = dedup(pref, freshIds);
+  const generalFresh = dedup(general, freshIds);
+
+  const isColdStart = profile.seen_ids.length === 0 && profile.liked.length === 0;
+  const fresh = isColdStart
+    ? [...prefFresh, ...generalFresh]
+    : shuffle([...prefFresh, ...generalFresh]);
 
   return {
     queue: [...state.queue, ...fresh],
