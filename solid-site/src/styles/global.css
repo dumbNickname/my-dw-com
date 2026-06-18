@@ -274,6 +274,14 @@ input:focus-visible {
   color: var(--c-text);
 }
 
+/* ───── Vintage feed: body scroll lock ───── */
+
+@media (min-width: 900px) {
+  html[data-layout="vintage"]:has([data-route="feed"]) {
+    overflow: hidden;
+  }
+}
+
 /* ───── Reduced motion ───── */
 
 @media (prefers-reduced-motion: reduce) {

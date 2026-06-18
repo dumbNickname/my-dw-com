@@ -224,6 +224,7 @@ export function Card(props: CardProps) {
   const [bodyBlocks, setBodyBlocks] = createSignal<BodyBlock[] | null>(null);
   const [bodyLoading, setBodyLoading] = createSignal(false);
   const [bodyError, setBodyError] = createSignal(false);
+  const [heroReady, setHeroReady] = createSignal(false);
 
   createEffect(() => {
     void props.content.id;
@@ -231,6 +232,7 @@ export function Card(props: CardProps) {
     setBodyBlocks(null);
     setBodyLoading(false);
     setBodyError(false);
+    setHeroReady(false);
   });
 
   async function handleExpand() {
@@ -294,15 +296,20 @@ export function Card(props: CardProps) {
           />
         </Match>
         <Match when={img()}>
+          <Show when={!heroReady()}>
+            <div class={styles["feed-card-img-placeholder"]} />
+          </Show>
           <img
             class={styles["feed-card-img"]}
+            classList={{ [styles["feed-card-img-hidden"]]: !heroReady() }}
             src={img()}
             alt=""
+            onLoad={() => setHeroReady(true)}
           />
         </Match>
       </Switch>
 
-      <div class={styles["feed-card-body"]}>
+      <div class={styles["feed-card-body"]} classList={{ [styles["feed-card-body-waiting"]]: !!(img() && !heroReady() && !isVideo() && !isAudio()) }}>
         <div class={styles["feed-card-meta"]}>
           <Show when={props.content.roadTeaserKicker}>
             <span class={styles["feed-card-kicker"]}>{props.content.roadTeaserKicker}</span>

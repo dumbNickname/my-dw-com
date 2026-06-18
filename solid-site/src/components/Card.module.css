@@ -17,6 +17,24 @@
   background: var(--c-surface-2);
 }
 
+.feed-card-img-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.feed-card-img-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--c-surface-2);
+}
+
+.feed-card-body-waiting {
+  opacity: 0;
+}
+
 .feed-card-video {
   width: 100%;
   aspect-ratio: 16 / 9;

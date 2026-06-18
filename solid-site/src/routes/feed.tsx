@@ -312,7 +312,7 @@ export default function Feed() {
             <button
               type="button"
               class="btn btn-ghost"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/?edit=1")}
             >
               Edit interests
             </button>

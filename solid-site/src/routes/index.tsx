@@ -17,7 +17,7 @@
  * Selections write to localStorage profile and the feed picks up from there.
  */
 import { Title } from "@solidjs/meta";
-import { useNavigate } from "@solidjs/router";
+import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, For, on, onMount, Show } from "solid-js";
 
 import { CarouselCard, carouselStyles } from "~/components/CarouselCard";
@@ -130,6 +130,7 @@ function withAutodetectedLang(p: Profile): Profile {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   let carouselRef: HTMLDivElement | undefined;
 
   const [profile, setProfile] = createSignal<Profile>(withAutodetectedLang(load()));
@@ -138,9 +139,8 @@ export default function Onboarding() {
   const [trendingError, setTrendingError] = createSignal(false);
   const [showAllLangs, setShowAllLangs] = createSignal(false);
 
-  // If the user already onboarded, redirect to /feed immediately.
   onMount(() => {
-    if (isOnboarded(profile())) {
+    if (isOnboarded(profile()) && !searchParams.edit) {
       navigate("/feed", { replace: true });
       return;
     }
