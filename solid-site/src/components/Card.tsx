@@ -191,7 +191,7 @@ function BodyParagraph(props: { segments: TextSegment[]; lang: string; onNavigat
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {link.text}
+                    {link.text}<svg class={styles["body-link-icon"]} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6" /></svg>
                   </a>
                 );
               })()}

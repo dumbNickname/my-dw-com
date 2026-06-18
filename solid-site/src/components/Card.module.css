@@ -187,6 +187,12 @@
 .body-link:hover {
   text-decoration-color: var(--c-primary);
 }
+.body-link-icon {
+  display: inline-block;
+  vertical-align: baseline;
+  margin-left: 2px;
+  opacity: 0.6;
+}
 
 .widget-iframe {
   width: 100%;
