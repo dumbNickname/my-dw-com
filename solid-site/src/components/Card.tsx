@@ -233,6 +233,7 @@ export function Card(props: CardProps) {
     setBodyLoading(false);
     setBodyError(false);
     setHeroReady(false);
+    props.onExpandChange?.(false);
   });
 
   async function handleExpand() {
