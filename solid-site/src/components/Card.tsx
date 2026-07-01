@@ -22,6 +22,7 @@ import { fetchBody, fetchWidget } from "~/lib/graphql";
 import { htmlToBlocks, type BodyBlock, type TextSegment } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
 import { byCode } from "~/lib/lang";
+import { speechSupported, bcp47ForLang, getVoicesAsync, pickVoice } from "~/lib/speech";
 
 import styles from "./Card.module.css";
 
@@ -50,6 +51,13 @@ const langShort = (lang: string | null | undefined): string =>
   (lang || "EN").toUpperCase().slice(0, 2);
 
 const summaryText = (c: CardContent): string => c.shortTeaser || c.teaser || "";
+
+function blocksToText(blocks: BodyBlock[]): string {
+  return blocks
+    .filter((b): b is Extract<BodyBlock, { kind: "text" }> => b.kind === "text")
+    .map((b) => b.segments.map((s) => s.text).join(""))
+    .join("\n\n");
+}
 
 function HlsVideo(props: { src: string; poster?: string }) {
   let videoRef: HTMLVideoElement | undefined;
@@ -213,6 +221,8 @@ export type CardProps = {
   onNavigate?: (contentId: number, lang: string) => void;
   expandRef?: (fn: () => void) => void;
   onExpandChange?: (expanded: boolean) => void;
+  listenRef?: (fn: () => void) => void;
+  onListenChange?: (speaking: boolean) => void;
 };
 
 export function Card(props: CardProps) {
@@ -225,6 +235,12 @@ export function Card(props: CardProps) {
   const [bodyLoading, setBodyLoading] = createSignal(false);
   const [bodyError, setBodyError] = createSignal(false);
   const [heroReady, setHeroReady] = createSignal(false);
+  const [speaking, setSpeaking] = createSignal(false);
+
+  const stopSpeaking = () => {
+    if (speechSupported()) window.speechSynthesis.cancel();
+    setSpeaking(false);
+  };
 
   createEffect(() => {
     void props.content.id;
@@ -233,8 +249,75 @@ export function Card(props: CardProps) {
     setBodyLoading(false);
     setBodyError(false);
     setHeroReady(false);
+    stopSpeaking();
     props.onExpandChange?.(false);
   });
+
+  onCleanup(stopSpeaking);
+
+  createEffect(() => {
+    props.onListenChange?.(speaking());
+  });
+
+  async function speakText(text: string) {
+    if (!speechSupported() || !text.trim()) return;
+    const bcp47 = bcp47ForLang(props.content.language);
+    const voices = await getVoicesAsync();
+    const voice = pickVoice(voices, bcp47);
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    if (voice) {
+      utter.voice = voice;
+      utter.lang = voice.lang;
+    } else if (bcp47) {
+      utter.lang = bcp47;
+    }
+    utter.onend = () => setSpeaking(false);
+    utter.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    window.speechSynthesis.speak(utter);
+  }
+
+  async function loadBody(): Promise<BodyBlock[]> {
+    const existing = bodyBlocks();
+    if (existing !== null) return existing;
+    setBodyLoading(true);
+    setBodyError(false);
+    try {
+      const html = await fetchBody(props.content.id, props.content.language);
+      const blocks = htmlToBlocks(html);
+      setBodyBlocks(blocks);
+      if (blocks.length === 0) setBodyError(true);
+      return blocks;
+    } catch {
+      setBodyError(true);
+      return [];
+    } finally {
+      setBodyLoading(false);
+    }
+  }
+
+  async function handleListen() {
+    if (speaking()) {
+      stopSpeaking();
+      return;
+    }
+    const blocks = await loadBody();
+    const gallery = isGallery()
+      ? galleryItems()
+          .map((g) => [g.name, g.description].filter(Boolean).join(". "))
+          .filter(Boolean)
+          .join("\n\n")
+      : "";
+    const parts = [
+      props.content.title || "",
+      summaryText(props.content),
+      blocksToText(blocks),
+      gallery,
+      isLiveblog() ? "Read more on dw.com." : "",
+    ].filter(Boolean);
+    speakText(parts.join("\n\n"));
+  }
 
   async function handleExpand() {
     if (expanded()) {
@@ -244,22 +327,11 @@ export function Card(props: CardProps) {
     }
     setExpanded(true);
     props.onExpandChange?.(true);
-    if (bodyBlocks() !== null) return;
-    setBodyLoading(true);
-    setBodyError(false);
-    try {
-      const html = await fetchBody(props.content.id, props.content.language);
-      const blocks = htmlToBlocks(html);
-      setBodyBlocks(blocks);
-      if (blocks.length === 0) setBodyError(true);
-    } catch {
-      setBodyError(true);
-    } finally {
-      setBodyLoading(false);
-    }
+    void loadBody();
   }
 
   props.expandRef?.(() => void handleExpand());
+  props.listenRef?.(() => void handleListen());
 
   const isVideo = () => props.content.modelType === "VIDEO" && !!props.content.hlsVideoSrc;
   const isAudio = () => props.content.modelType === "AUDIO" && !!props.content.mp3Src;
@@ -496,6 +568,33 @@ export function Card(props: CardProps) {
           </svg>
           <span class={styles["action-label"]}>{expanded() ? "Less" : "Read"}</span>
         </button>
+
+        <Show when={speechSupported() && !isVideo() && !isAudio()}>
+          <button
+            type="button"
+            class={styles["action-btn"]}
+            data-active={speaking()}
+            onClick={() => handleListen()}
+            aria-pressed={speaking()}
+            aria-label={speaking() ? "Stop reading article aloud" : "Read article aloud"}
+          >
+            <Show
+              when={!speaking()}
+              fallback={
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+              }
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+              </svg>
+            </Show>
+            <span class={styles["action-label"]}>{speaking() ? "Stop" : "Listen"}</span>
+          </button>
+        </Show>
 
         <a
           class={`${styles["action-btn"]} ${styles["action-btn-link"]}`}

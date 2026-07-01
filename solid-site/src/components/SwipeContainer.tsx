@@ -21,6 +21,8 @@ export type SwipeContainerProps = {
   dwLink?: string;
   onToggleLike?: () => void;
   onToggleSave?: () => void;
+  onListen?: () => void;
+  listening?: boolean;
   children: JSX.Element;
 };
 
@@ -310,6 +312,35 @@ export function SwipeContainer(props: SwipeContainerProps) {
           </span>
           <span class={styles["dial-label"]}>Interesting</span>
         </button>
+        <Show when={props.onListen}>
+          <div class={styles["dial-divider"]} />
+          <button
+            type="button"
+            class={`${styles.dial} ${styles["dial-listen"]}`}
+            data-active={props.listening}
+            onClick={() => props.onListen?.()}
+            aria-pressed={props.listening}
+            aria-label={props.listening ? "Stop reading article aloud" : "Read article aloud"}
+          >
+            <span class={styles["dial-knob"]}>
+              <Show
+                when={!props.listening}
+                fallback={
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <rect x="6" y="5" width="4" height="14" rx="1" />
+                    <rect x="14" y="5" width="4" height="14" rx="1" />
+                  </svg>
+                }
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+                  <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                  <path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" />
+                </svg>
+              </Show>
+            </span>
+            <span class={styles["dial-label"]}>{props.listening ? "Stop" : "Listen"}</span>
+          </button>
+        </Show>
       </div>
     </div>
   );

@@ -186,6 +186,13 @@
   :global([data-layout="vintage"]) .dial-interesting:hover .dial-knob {
     border-color: var(--c-interesting);
   }
+  :global([data-layout="vintage"]) .dial-listen:hover .dial-knob,
+  :global([data-layout="vintage"]) .dial-listen[data-active="true"] .dial-knob {
+    border-color: var(--c-primary);
+  }
+  :global([data-layout="vintage"]) .dial-listen[data-active="true"] .dial-label {
+    color: var(--c-primary);
+  }
 
   :global([data-layout="vintage"]) .dial-label {
     font-size: 8px;
@@ -286,6 +293,10 @@
   :global([data-layout="classic"]) .control-panel .dial:hover {
     background: var(--c-surface-2);
     color: var(--c-text);
+  }
+  :global([data-layout="classic"]) .control-panel .dial-listen[data-active="true"] {
+    color: var(--c-primary);
+    border-color: var(--c-primary);
   }
   :global([data-layout="classic"]) .control-panel .dial-knob {
     display: contents;

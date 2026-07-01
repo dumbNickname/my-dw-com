@@ -30,6 +30,7 @@ import { Card } from "~/components/Card";
 import { CardSkeleton } from "~/components/Skeleton";
 import { SwipeContainer, type SwipeDirection } from "~/components/SwipeContainer";
 import { fetchCard, type CardContent } from "~/lib/graphql";
+import { speechSupported } from "~/lib/speech";
 import { resolveImage } from "~/lib/image";
 import * as peach from "~/lib/peach";
 import * as pool from "~/lib/pool";
@@ -246,6 +247,15 @@ export default function Feed() {
 
   let expandFn: (() => void) | undefined;
   const [cardExpanded, setCardExpanded] = createSignal(false);
+  let listenFn: (() => void) | undefined;
+  const [cardSpeaking, setCardSpeaking] = createSignal(false);
+
+  const canListen = (c: CardContent | null): boolean => {
+    if (!speechSupported() || !c) return false;
+    if (c.modelType === "VIDEO" && c.hlsVideoSrc) return false;
+    if (c.modelType === "AUDIO" && c.mp3Src) return false;
+    return true;
+  };
 
   const currentCard = createMemo(() => {
     const s = state();
@@ -287,6 +297,8 @@ export default function Feed() {
               dwLink={dwLink()}
               onToggleLike={() => onToggleLike(card())}
               onToggleSave={() => onToggleSave(card())}
+              onListen={canListen(card()) ? () => listenFn?.() : undefined}
+              listening={cardSpeaking()}
             >
               <Card
                 content={card()}
@@ -298,6 +310,8 @@ export default function Feed() {
                 onNavigate={handleNavigate}
                 expandRef={(fn) => { expandFn = fn; }}
                 onExpandChange={setCardExpanded}
+                listenRef={(fn) => { listenFn = fn; }}
+                onListenChange={setCardSpeaking}
               />
             </SwipeContainer>
           );
