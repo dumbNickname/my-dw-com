@@ -300,6 +300,8 @@ solid-site/
     │   ├── image.ts                resolveImage + format ladder
     │   ├── lang.ts                 LANGUAGES, browser autodetect
     │   ├── htmlText.ts             body HTML → BodyBlock[] (text + images + widgets)
+    │   ├── speech.ts               Web Speech TTS helpers (voice pick by lang)
+    │   ├── network.ts              Network Information API (slow-conn detection)
     │   ├── pool.ts                 cold-start candidate pool + bucketed interesting
     │   ├── profile.ts              localStorage profile + toggles + interesting
     │   └── libraryContext.ts       Solid context: openLibrary()
@@ -373,13 +375,35 @@ solid-site/
 - **Content type support**: Card renders differently per `modelType`:
   - `ARTICLE` — hero image + text body with inline images
   - `VIDEO` — HLS player (hls.js on Chrome/FF, native on Safari).
-    Loaded on mount, PiP disabled.
+    Loaded on mount, PiP disabled. hls.js does ABR automatically; a
+    quality-selector popover (Auto + per-level heights) overlays the
+    player when >1 level exists (`hls.currentLevel`; `-1` = auto).
+    Safari native HLS has no JS quality control, so the picker is
+    hidden there.
   - `AUDIO` — hero image + native `<audio controls>` with mp3Src
   - `IMAGE_GALLERY` — hero image + scrollable gallery (all images with
     title/description, separated by lines). First gallery image is
     deduped against hero if same ID.
   - `LIVEBLOG` — article-style with "Follow live updates on dw.com" CTA
-    (pulsing red dot) after expanded body.
+    (pulsing red dot) after expanded body. Does NOT render the per-post
+    timeline (dropped); expand just fetches the article body.
+- **Listen (Web Speech TTS)**: `lib/speech.ts` wraps `speechSynthesis`.
+  Reads title + summary + body (+ gallery captions; liveblogs append
+  "Read more on dw.com"). Body is lazy-fetched on Listen even when not
+  expanded. Voice is picked by article language via `bcp47ForLang`
+  (DW enum → `languages.json` code) + `getVoicesAsync` (waits for
+  `voiceschanged` since `getVoices()` is empty on first call — otherwise
+  Chrome silently falls back to an English voice). Shown for
+  article/liveblog/gallery only (video/audio have native players).
+  Mobile: button in Card action bar. Desktop: a Listen dial in
+  `SwipeContainer` (vintage only; classic uses the card's own button —
+  the dial is CSS-hidden there to avoid duplicates).
+- **Slow-connection handling**: `lib/network.ts` `isSlowConnection()`
+  (Chromium-only Network Information API: `saveData` or `effectiveType`
+  ∈ {slow-2g, 2g}). Hero images downsize to ≤320px target width; hls.js
+  starts at the lowest level with `capLevelToPlayerSize`. A "Data saver"
+  badge shows in the app footer, reactive via `onConnectionChange`.
+  No-ops (never slow) on Safari/Firefox.
 - **PWA manifest**: app is installable. Custom SVG icons (192/512px),
   standalone display, portrait orientation.
 - **Image sizing**: hero image target is `min(window.innerWidth, 720)`

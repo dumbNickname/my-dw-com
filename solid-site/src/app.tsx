@@ -104,9 +104,10 @@ function Shell(props: { children: JSX.Element }) {
               class={styles["app-footer-saver"]}
               title="Slow connection detected — images and video are served at reduced quality to save data."
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
-                <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
-                <path d="M9 12l2 2 4-4" />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="2" y="14" width="4" height="6" rx="1" />
+                <rect x="9" y="9" width="4" height="11" rx="1" opacity="0.35" />
+                <rect x="16" y="4" width="4" height="16" rx="1" opacity="0.35" />
               </svg>
               Data saver
             </span>
