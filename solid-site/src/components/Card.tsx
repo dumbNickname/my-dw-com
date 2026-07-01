@@ -23,6 +23,7 @@ import { htmlToBlocks, type BodyBlock, type TextSegment } from "~/lib/htmlText";
 import { resolveImage } from "~/lib/image";
 import { byCode } from "~/lib/lang";
 import { speechSupported, bcp47ForLang, getVoicesAsync, pickVoice } from "~/lib/speech";
+import { isSlowConnection, onConnectionChange } from "~/lib/network";
 
 import styles from "./Card.module.css";
 
@@ -59,9 +60,21 @@ function blocksToText(blocks: BodyBlock[]): string {
     .join("\n\n");
 }
 
+type HlsLevel = { height: number; bitrate: number };
+
 function HlsVideo(props: { src: string; poster?: string }) {
   let videoRef: HTMLVideoElement | undefined;
   let hlsInstance: any;
+
+  const [levels, setLevels] = createSignal<HlsLevel[]>([]);
+  const [currentLevel, setCurrentLevel] = createSignal(-1);
+  const [menuOpen, setMenuOpen] = createSignal(false);
+
+  const selectLevel = (index: number) => {
+    if (hlsInstance) hlsInstance.currentLevel = index;
+    setCurrentLevel(index);
+    setMenuOpen(false);
+  };
 
   onMount(() => {
     if (!videoRef) return;
@@ -72,10 +85,23 @@ function HlsVideo(props: { src: string; poster?: string }) {
     import("hls.js").then((mod) => {
       const Hls = mod.default;
       if (!Hls.isSupported() || !videoRef) return;
-      const hls = new Hls();
+      const hls = new Hls(
+        isSlowConnection() ? { capLevelToPlayerSize: true, startLevel: 0 } : {},
+      );
       hls.loadSource(props.src);
       hls.attachMedia(videoRef);
       hlsInstance = hls;
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setLevels(hls.levels.map((l: any) => ({ height: l.height, bitrate: l.bitrate })));
+        if (isSlowConnection() && hls.levels.length > 0) {
+          hls.currentLevel = 0;
+          setCurrentLevel(0);
+        }
+      });
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_e: unknown, d: any) => {
+        if (hls.autoLevelEnabled) setCurrentLevel(-1);
+        else setCurrentLevel(d.level);
+      });
     }).catch(() => {
       if (videoRef) videoRef.src = props.src;
     });
@@ -86,15 +112,63 @@ function HlsVideo(props: { src: string; poster?: string }) {
   });
 
   return (
-    <video
-      ref={videoRef}
-      class={styles["feed-card-video"]}
-      controls
-      playsinline
-      disablepictureinpicture
-      preload="metadata"
-      poster={props.poster}
-    />
+    <div class={styles["feed-card-video-wrap"]}>
+      <video
+        ref={videoRef}
+        class={styles["feed-card-video"]}
+        controls
+        playsinline
+        disablepictureinpicture
+        preload="metadata"
+        poster={props.poster}
+      />
+      <Show when={levels().length > 1}>
+        <div class={styles["quality-control"]}>
+          <button
+            type="button"
+            class={styles["quality-btn"]}
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-haspopup="true"
+            aria-expanded={menuOpen()}
+            aria-label="Video quality"
+          >
+            {currentLevel() === -1 ? "Auto" : `${levels()[currentLevel()]?.height}p`}
+          </button>
+          <Show when={menuOpen()}>
+            <ul class={styles["quality-menu"]} role="menu">
+              <li role="none">
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={currentLevel() === -1}
+                  class={styles["quality-item"]}
+                  data-active={currentLevel() === -1}
+                  onClick={() => selectLevel(-1)}
+                >
+                  Auto
+                </button>
+              </li>
+              <For each={levels().map((l, i) => ({ l, i })).slice().reverse()}>
+                {(entry) => (
+                  <li role="none">
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={currentLevel() === entry.i}
+                      class={styles["quality-item"]}
+                      data-active={currentLevel() === entry.i}
+                      onClick={() => selectLevel(entry.i)}
+                    >
+                      {entry.l.height}p
+                    </button>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </Show>
+        </div>
+      </Show>
+    </div>
   );
 }
 
@@ -226,7 +300,16 @@ export type CardProps = {
 };
 
 export function Card(props: CardProps) {
-  const cardWidth = () => typeof window !== "undefined" ? Math.min(window.innerWidth, 720) : 720;
+  const [slowConn, setSlowConn] = createSignal(isSlowConnection());
+  onMount(() => {
+    const off = onConnectionChange(() => setSlowConn(isSlowConnection()));
+    onCleanup(off);
+  });
+
+  const cardWidth = () => {
+    const base = typeof window !== "undefined" ? Math.min(window.innerWidth, 720) : 720;
+    return slowConn() ? Math.min(base, 320) : base;
+  };
   const img = () => resolveImage(props.content.mainContentImage?.staticUrl, "60X", cardWidth());
   const dwLink = () => buildDwLink(props.content);
 

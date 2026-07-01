@@ -13,6 +13,7 @@ import {
   toggleSave,
   type Profile,
 } from "./lib/profile";
+import { isSlowConnection, onConnectionChange } from "./lib/network";
 
 import styles from "./app.module.css";
 import "./styles/global.css";
@@ -60,6 +61,13 @@ function Shell(props: { children: JSX.Element }) {
     onCleanup(() => window.removeEventListener("mydw:profile-change", onChange));
   });
 
+  const [slowConn, setSlowConn] = createSignal(false);
+  onMount(() => {
+    setSlowConn(isSlowConnection());
+    const off = onConnectionChange(() => setSlowConn(isSlowConnection()));
+    onCleanup(off);
+  });
+
   const [sheetOpen, setSheetOpen] = createSignal(false);
 
   const removeSaved = (id: string) => {
@@ -91,6 +99,18 @@ function Shell(props: { children: JSX.Element }) {
           <Suspense>{props.children}</Suspense>
         </main>
         <footer class={styles["app-footer"]} aria-label="App actions">
+          <Show when={slowConn()}>
+            <span
+              class={styles["app-footer-saver"]}
+              title="Slow connection detected — images and video are served at reduced quality to save data."
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+                <path d="M12 2 4 6v6c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
+              Data saver
+            </span>
+          </Show>
           <a href={BASE_PATH + "/privacy"} class={styles["app-footer-link"]}>Privacy</a>
           <button
             type="button"
