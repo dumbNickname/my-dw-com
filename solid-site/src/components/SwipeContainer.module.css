@@ -294,9 +294,8 @@
     background: var(--c-surface-2);
     color: var(--c-text);
   }
-  :global([data-layout="classic"]) .control-panel .dial-listen[data-active="true"] {
-    color: var(--c-primary);
-    border-color: var(--c-primary);
+  :global([data-layout="classic"]) .control-panel .dial-listen {
+    display: none;
   }
   :global([data-layout="classic"]) .control-panel .dial-knob {
     display: contents;
